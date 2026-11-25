@@ -3,11 +3,6 @@ package com.smartisan.music.ui.loved
 import androidx.media3.common.MediaItem
 import com.smartisan.music.data.favorite.FavoriteSongRecord
 
-enum class LovedSongsSortMode {
-    Time,
-    SongName,
-}
-
 data class LovedSongEntry(
     val mediaItem: MediaItem,
     val likedAt: Long,
@@ -29,31 +24,6 @@ internal fun buildLovedSongEntries(
                 mediaItem = mediaItem,
                 likedAt = favorite.likedAt,
             )
-        }
-    }
-}
-
-internal fun sortLovedSongEntries(
-    entries: List<LovedSongEntry>,
-    sortMode: LovedSongsSortMode,
-    titleComparator: Comparator<String>,
-): List<LovedSongEntry> {
-    return when (sortMode) {
-        LovedSongsSortMode.Time -> entries.sortedWith(
-            compareByDescending<LovedSongEntry> { it.likedAt }
-                .thenBy { it.mediaItem.mediaId },
-        )
-
-        LovedSongsSortMode.SongName -> entries.sortedWith { left, right ->
-            val titleResult = titleComparator.compare(
-                left.mediaItem.lovedSongTitleKey(),
-                right.mediaItem.lovedSongTitleKey(),
-            )
-            when {
-                titleResult != 0 -> titleResult
-                left.likedAt != right.likedAt -> right.likedAt.compareTo(left.likedAt)
-                else -> left.mediaItem.mediaId.compareTo(right.mediaItem.mediaId)
-            }
         }
     }
 }
@@ -84,10 +54,4 @@ internal fun buildLovedSongsShuffleRequest(entries: List<LovedSongEntry>): Loved
         mediaItems = entries.map(LovedSongEntry::mediaItem),
         startIndex = 0,
     )
-}
-
-internal fun MediaItem.lovedSongTitleKey(): String {
-    return mediaMetadata.displayTitle?.toString()
-        ?: mediaMetadata.title?.toString()
-        ?: ""
 }

@@ -2,6 +2,7 @@ package com.smartisan.music.ui.components
 
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,6 +13,7 @@ import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -31,6 +33,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.smartisan.music.R
+import com.smartisan.music.ui.library.cardTextureMonet
 
 /** Compose owns the content; the public dialog window preserves dismissal and IME boundaries. */
 @Composable
@@ -56,7 +59,22 @@ internal fun SmartisanModal(
             // delaying the caller's confirmation would change the existing data/event order.
             if (bottom) window.setWindowAnimations(android.R.style.Animation_InputMethod)
         }
-        Column(modifier, content = content)
+        // 底部弹窗不能只依赖 window.setGravity(BOTTOM)：部分机型上弹窗内容在
+        // gravity 生效前就已布局，会停在屏幕顶部（上圆角下直角的底部弹窗跑到顶上）。
+        // 直接用布局保证：内容永远沉在整窗最底部。
+        if (bottom) {
+            Column(modifier.fillMaxSize()) {
+                // 窗口占满全屏后「点弹窗外侧关闭」需自行处理：空隙区域点一下即 dismiss
+                Spacer(
+                    Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) {
+                        detectTapGestures(onTap = { onDismiss() })
+                    },
+                )
+                Column(content = content)
+            }
+        } else {
+            Column(modifier, content = content)
+        }
     }
 }
 
@@ -70,9 +88,8 @@ internal fun SmartisanMenuTitleBar(
     Box(
         Modifier.fillMaxWidth()
             .height(dimensionResource(R.dimen.titlebar_height))
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(R.drawable.bottom_sheet_title_bar_bg)
-            )
+            // [1.4.29·R123] 标题栏与卡片主体同一套淡渐变，避免两截色。
+            .cardTextureMonet(R.drawable.bottom_sheet_title_bar_bg)
     ) {
         BasicText(
             title,
@@ -92,7 +109,7 @@ internal fun SmartisanMenuTitleBar(
                     platformStyle = PlatformTextStyle(includeFontPadding = true),
                 ),
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
         if (onConfirm != null) {
             ModalIcon(
@@ -193,7 +210,7 @@ internal fun SmartisanDialogButton(
                     platformStyle = PlatformTextStyle(includeFontPadding = true),
                 ),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
     }
 }
@@ -209,9 +226,8 @@ internal fun SmartisanDeleteConfirmation(
         SmartisanMenuTitleBar(title, onDismiss)
         Column(
             Modifier.fillMaxWidth()
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(R.drawable.menu_dialog_background)
-                )
+                // [1.4.29·R123] 弹窗卡片底：白卡 + 淡渐变，与列表行同一套。
+                .cardTextureMonet(R.drawable.menu_dialog_background)
                 .padding(horizontal = dimensionResource(R.dimen.menu_dialog_horizontal_distance))
                 .padding(
                     top = dimensionResource(R.dimen.menu_dialog_btn_margin_view),

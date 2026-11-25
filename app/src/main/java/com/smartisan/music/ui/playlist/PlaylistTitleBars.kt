@@ -92,11 +92,6 @@ internal fun PlaylistTitleArea(
                     item == null && onRootBack != null ->
                         listOf(
                             SmartisanTitleBarAction(
-                                R.drawable.standard_icon_multi_select_selector,
-                                edit,
-                                onRootEnterEdit,
-                            ),
-                            SmartisanTitleBarAction(
                                 R.drawable.search_btn_selector,
                                 search,
                                 onSearchClick,
@@ -127,9 +122,21 @@ internal fun PlaylistTitleArea(
                             )
                         )
                 }
+            // 编辑（多选）按钮放左上方、紧跟返回键右侧（与更多里的歌曲/专辑页统一，1.2.16）
+            val leftExtra =
+                if (item == null && !rootEditing && onRootBack != null)
+                    listOf(
+                        SmartisanTitleBarAction(
+                            R.drawable.standard_icon_multi_select_selector,
+                            edit,
+                            onRootEnterEdit,
+                        )
+                    )
+                else emptyList()
             SmartisanTitleBar(
                 item?.title ?: stringResource(R.string.tab_play_list),
                 navigationIcon = left,
+                navigationActions = leftExtra,
                 actions = right,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -164,7 +171,7 @@ internal fun PlaylistAddModeTitleArea(
                         platformStyle = PlatformTextStyle(includeFontPadding = true),
                     ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
             )
         }
         SmartisanTitleBar(

@@ -15,7 +15,14 @@ media3 = "1.10.1"
 datastore = "1.2.1"
 room = "2.8.4"
 dynamicanimation = "1.1.0"
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+gson = "2.11.0"
+zxing = "3.5.3"
+coil = "2.6.0"
 ksp = "2.3.9"
+jaudiotagger = "3.0.1"
+materialColorUtilities = "0.1.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +53,16 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-dynamicanimation = { group = "androidx.dynamicanimation", name = "dynamicanimation", version.ref = "dynamicanimation" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+# 音频标签读写（写回歌手/专辑/封面到文件本身）
+jaudiotagger = { group = "net.jthink", name = "jaudiotagger", version.ref = "jaudiotagger" }
+# 谷歌官方 Material 3 动态取色算法（HCT/CAM16/TonalPalette/SchemeTonalSpot），严格 M3 三色主题用
+material-color-utilities = { group = "me.tatarka.google.material", name = "material-color-utilities", version.ref = "materialColorUtilities" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

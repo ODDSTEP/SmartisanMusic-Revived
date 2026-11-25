@@ -27,15 +27,21 @@ data class LibraryExclusions(
         return hiddenDirectoryKeys.contains(normalized)
     }
 
-    fun isMediaHidden(mediaId: String, relativePath: String?): Boolean {
-        if (hiddenMediaIds.contains(mediaId)) {
-            return true
-        }
+    /** 仅按目录判断是否被隐藏（单个歌曲的隐藏不算），供资料库列表使用：
+     *  单独隐藏的歌曲要保留在列表数据里（编辑模式下变暗、可恢复），与文件夹页行为一致 */
+    fun isHiddenByDirectory(relativePath: String?): Boolean {
         val normalizedPath = relativePath?.normalizedDirectoryKey().orEmpty()
         if (normalizedPath.isEmpty()) {
             return false
         }
         return hiddenDirectoryKeys.contains(normalizedPath)
+    }
+
+    fun isMediaHidden(mediaId: String, relativePath: String?): Boolean {
+        if (hiddenMediaIds.contains(mediaId)) {
+            return true
+        }
+        return isHiddenByDirectory(relativePath)
     }
 
     fun contentHash(): Int {
@@ -92,11 +98,25 @@ class LibraryExclusionsStore(
         }
     }
 
-    suspend fun hideDirectoryKeys(directoryKeys: Set<String>) {
-        setDirectoryKeysHidden(directoryKeys = directoryKeys, hidden = true)
+    /**
+     * 1.2.26：MediaStore 换号后把隐藏项从旧 id 迁到新 id。
+     * 不迁的话用户会看到「明明隐藏过的歌又冒出来了」，而且旧 id 会永远留在集合里。
+     */
+    suspend fun remapMediaIds(mapping: Map<String, String>) {
+        if (mapping.isEmpty()) return
+        context.libraryExclusionsDataStore.edit { preferences ->
+            val current = preferences[HiddenMediaIdsKey].orEmpty()
+            if (current.isEmpty()) return@edit
+            val next = current.mapTo(mutableSetOf()) { id -> mapping[id] ?: id }
+            if (next != current) {
+                preferences[HiddenMediaIdsKey] = next
+            }
+        }
     }
 
-    suspend fun showDirectoryKeys(directoryKeys: Set<String>) {
+    suspend fun hideDirectoryKeys(directoryKeys: Set<String>) {
+        setDirectoryKeysHidden(directoryKeys = directoryKeys, hidden = true)
+    }    suspend fun showDirectoryKeys(directoryKeys: Set<String>) {
         setDirectoryKeysHidden(directoryKeys = directoryKeys, hidden = false)
     }
 

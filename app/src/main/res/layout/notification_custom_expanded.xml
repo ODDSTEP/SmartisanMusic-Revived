@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  [1.4.24·R40 自绘通知·展开态] 整体重排
+
+  用户实机反馈（大通知）：
+    「大通知也是个逆天……通知图标不能做成专辑封面吗？怎么又显示专辑封面，又显示通知图标的？」
+
+  根因与本轮改法：
+    Android 12+ 起，targetSdk≥31 的自定义内容视图通知会被系统强制套上标准模板，
+    展开态顶部一定有一行系统装饰头（App 图标 + App 名 + 收起按钮）。
+    上一版自绘布局的第一行又画了一张专辑封面 → 同一个展开态里出现
+    「系统通知图标」+「自绘专辑封面」两张图，视觉上打架。
+
+    本轮：**自绘布局里彻底不再画封面**，专辑封面改由通知的 large icon 承载
+    （setLargeIcon），由系统放到展开态图标位 —— 这正是用户要的
+    「通知图标做成专辑封面」。这样展开态只有一张图。
+
+  结构：
+    第一行：标题 / 副标题（weight=1） + 播放模式键 + 收藏键
+    第二行：当前时间 + 进度条 + 总时长（进度条只读，点通知主体进 App 播放页拖）
+    第三行：上一首 / 播放暂停 / 下一首，各占 1/3 宽度、72dp 高 —— 整行大热区。
+
+  [R40] 按钮图标改用 drawable-xxhdpi 的 notif_big_*（32dp 视觉）。
+  上一版这些 PNG 放在 drawable-nodpi（1px=1dp），图形被二次缩小到 ~7dp，
+  这就是用户说的「按钮小得跟鸡屁一样」；xxhdpi 是 3x，96px 正好 32dp。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/notif_expanded_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingLeft="14dp"
+    android:paddingRight="8dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="40dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingRight="4dp">
+
+            <TextView
+                android:id="@+id/notif_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/notif_text_primary" />
+
+            <TextView
+                android:id="@+id/notif_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textSize="12sp"
+                android:textColor="@color/notif_text_secondary" />
+        </LinearLayout>
+
+        <!-- [1.4.26] 通知图标全部换 24dp 矢量，替代位图抠图的锯齿大三角/心形。 -->
+        <ImageView
+            android:id="@+id/notif_btn_mode"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/notif_vec_repeat"
+            android:contentDescription="@string/notification_action_playback_mode" />
+
+        <ImageView
+            android:id="@+id/notif_btn_favorite"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/notif_vec_favorite"
+            android:contentDescription="@string/notification_action_favorite" />
+    </LinearLayout>
+
+    <!-- [1.4.26] 整行绑定"回到 App 上次页面"，点时间/进度条空白也不跳大播放页。 -->
+    <LinearLayout
+        android:id="@+id/notif_progress_row"
+        android:layout_width="match_parent"
+        android:layout_height="22dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/notif_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:includeFontPadding="false"
+            android:textColor="@color/notif_text_secondary"
+            android:text="0:00" />
+
+        <ProgressBar
+            android:id="@+id/notif_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="3dp"
+            android:layout_weight="1"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="8dp"
+            android:layout_gravity="center_vertical"
+            android:max="1000"
+            android:progress="0"
+            android:progressDrawable="@drawable/notif_progress" />
+
+        <TextView
+            android:id="@+id/notif_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:includeFontPadding="false"
+            android:textColor="@color/notif_text_secondary"
+            android:text="0:00" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- [1.4.26] 24dp 矢量，fitCenter 等比居中，不再用 96px 位图抠图放大。 -->
+        <ImageView
+            android:id="@+id/notif_btn_prev"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/notif_vec_prev"
+            android:contentDescription="@string/previous_song" />
+
+        <ImageView
+            android:id="@+id/notif_btn_play_pause"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/notif_vec_play"
+            android:contentDescription="@string/play" />
+
+        <ImageView
+            android:id="@+id/notif_btn_next"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/notif_vec_next"
+            android:contentDescription="@string/next_song" />
+    </LinearLayout>
+</LinearLayout>

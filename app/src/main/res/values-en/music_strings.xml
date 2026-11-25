@@ -2,14 +2,154 @@
     <string name="cd_play_all">Playlist</string>
     <string name="cd_shuffle">Shuffle</string>
     <string name="sort_by_song_name">Song title</string>
+    <string name="sort_by_sample_rate">Sample rate</string>
+    <string name="sort_by_quality">Quality</string>
+    <string name="sort_by_format">Format</string>
+    <string name="sort_by_duration">Duration</string>
+    <string name="sort_by_bitrate">Bitrate</string>
+    <string name="sort_by_bit_depth">Bit depth</string>
     <string name="sort_by_song_play_time">Play count</string>
+    <string name="sort_by_added_time">Date added</string>
     <string name="sort_by_song_score">Rating</string>
-    <string name="sort_by_song_update_time">Date added</string>
+    <string name="sort_by_artist">Artist</string>
     <string name="nostar">No rating</string>
-    <string name="section_today">Today</string>
-    <string name="section_day_before">One day ago</string>
-    <string name="section_week_before">One week ago</string>
-    <string name="section_month_before">One month ago</string>
     <string name="song_score_header">%1$d-star rating</string>
     <string name="tab_more">More</string>
+    <string name="volume_normalization">Volume normalization</string>
+    <string name="export_logs">Export logs</string>
+    <string name="export_logs_summary">Pack and share runtime logs</string>
+    <string name="export_logs_failed">Logs empty or export failed</string>
+    <string name="transcode_cache">Transcode cache</string>
+    <string name="transcode_cache_clear_confirm">Clear transcode cache?</string>
+    <string name="transcode_cache_cleared">Transcode cache cleared</string>
+    <string name="all_files_access_title">Enable "All files access"</string>
+    <string name="all_files_access_message">Formats like DSD (DFF/DSF), DTS and WavPack are not classified as audio by the system. "All files access" is required to read and play them. Takes effect after returning to the app.</string>
+    <string name="all_files_access_go">Open settings</string>
+    <string name="action_view_album">View album</string>
+    <string name="action_view_folder">View folder</string>
+    <string name="action_view_artist">View artist</string>
+    <string name="action_song_info">Song info</string>
+    <string name="action_share">Share</string>
+    <string name="info_label_title">Song</string>
+    <string name="info_label_artist">Artist</string>
+    <string name="info_label_album">Album</string>
+    <string name="info_label_duration">Duration</string>
+    <string name="info_label_format">Format</string>
+    <string name="info_label_sample_rate">Sample rate</string>
+    <string name="info_label_bit_depth">Bit depth</string>
+    <string name="info_label_bitrate">Bitrate</string>
+    <string name="info_label_folder">Folder</string>
+    <string name="info_label_file_name">File name</string>
+    <string name="edit_song_info">Edit song info</string>
+    <string name="edit_song_info_cover">Album art</string>
+    <string name="edit_song_info_choose_cover">Choose image</string>
+    <string name="edit_song_info_saved">Written to the audio file, refreshing library</string>
+    <string name="edit_song_info_failed">Save failed: %1$s</string>
+    <string name="edit_song_info_need_permission">Grant write access to modify the audio file</string>
+    <string name="audio_output">Audio output</string>
+    <string name="audio_output_input_sample_rate">Input sample rate</string>
+    <string name="audio_output_output_sample_rate">Output sample rate</string>
+    <string name="audio_output_input_bit_depth">Input bit depth</string>
+    <string name="audio_output_output_bit_depth">Output bit depth</string>
+    <string name="audio_output_output_port">Output port</string>
+    <string name="audio_output_input_channels">Input channels</string>
+    <string name="audio_output_effects_note_value">Paused to preserve high-res output</string>
+    <string name="audio_output_effects_note">Effects</string>
+    <string name="audio_output_output_channels">Output channels</string>
+    <string name="audio_output_format">Format</string>
+    <string name="settings_section_file_scan">File scanning</string>
+    <string name="settings_filter_non_song">Filter non-song files and folders</string>
+    <string name="settings_skip_small_files">Skip songs under 500KB</string>
+    <string name="settings_skip_short_songs">Skip songs under 60 seconds</string>
+    <string name="file_scan_applied">File scan settings applied</string>
+    <string name="output_port_wired">Wired headset</string>
+    <string name="output_port_bluetooth">Bluetooth</string>
+    <string name="output_port_usb">USB device</string>
+    <string name="output_port_speaker">Speaker</string>
+    <string name="output_channels_stereo">2 (stereo)</string>
+    <string name="output_channels_count">%1$d ch</string>
+
+    <!-- Track info -->
+    <string name="info_label_file_size">File size</string>
+
+    <!-- Playback failure reasons -->
+    <string name="playback_error_unsupported_format">Unsupported audio format</string>
+    <string name="playback_error_decode_failed">Decoding failed: device cannot handle this format</string>
+    <string name="playback_error_output_failed">Audio output initialization failed</string>
+    <string name="playback_error_io">Cannot read the audio file</string>
+    <string name="playback_error_generic">Playback failed</string>
+
+    <!-- USB exclusive -->
+    <string name="settings_section_output">Audio output</string>
+    <string name="usb_exclusive">USB exclusive</string>
+    <string name="usb_exclusive_perf_priority">Exclusive performance priority</string>
+    <string name="usb_exclusive_perf_priority_desc_on">On: raises audio thread priority, requests performance hints, keeps background activity. Only reduces OEM throttling; may use more battery. For full immunity, allowlist this app in battery optimization.</string>
+    <string name="usb_exclusive_perf_priority_desc_off">Off: no performance hints; background playback is more likely to be throttled. Re-enable if you see stutter.</string>
+    <string name="usb_exclusive_battery_guide">Allow background activity</string>
+    <string name="usb_exclusive_battery_guide_summary">Open system settings to add this app to the battery-optimization allowlist</string>
+    <string name="usb_exclusive_summary">Lock output to the USB DAC, bypassing system mixing</string>
+    <string name="usb_device_none">No USB audio device detected</string>
+    <string name="usb_device_connected">%1$s connected</string>
+    <string name="usb_exclusive_active">Exclusive output · %1$s</string>
+    <string name="usb_exclusive_inactive">Shared output (system mixer)</string>
+    <string name="usb_permission_needed">USB device permission required</string>
+    <string name="usb_device_lost">USB audio device removed, playback paused</string>
+    <string name="usb_exclusive_degraded">The USB exclusive output was unstable and has been switched to a stable mode (audio effects still work). To retry exclusive output, turn the USB exclusive switch off and back on.</string>
+    <string name="usb_not_granted">USB permission not granted, using system output</string>
+    <string name="usb_volume">USB volume</string>
+    <string name="usb_volume_summary">Digital attenuation while exclusive</string>
+
+    <!-- Listening memory -->
+    <string name="memory">Listening memory</string>
+    <string name="memory_summary">What I have learned about your listening</string>
+    <string name="memory_total_plays">Total plays</string>
+    <string name="memory_total_plays_value">%1$d plays · about %2$s</string>
+    <string name="memory_top_artist">Most played artist</string>
+    <string name="memory_top_album">Most played album</string>
+    <string name="memory_active_hours">Usual listening hours</string>
+    <string name="memory_hi_res_ratio">High-resolution share</string>
+    <string name="memory_loved">Marked as favourite</string>
+    <string name="memory_most_skipped">Most skipped</string>
+    <string name="memory_recent">Recently on repeat</string>
+    <string name="memory_empty">Not enough memory yet — listen to a few more songs</string>
+    <string name="memory_clear">Clear memory</string>
+    <string name="memory_cleared">Memory cleared</string>
+    <string name="memory_hour_range">%1$d:00 – %2$d:00</string>
+    <string name="memory_plays_suffix">%1$d plays</string>
+
+    <!-- Listening memory -->
+    <string name="settings_section_ui">Interface</string>
+    <string name="settings_section_memory">Memory</string>
+    <!-- 1.4.11 · S16 remember-list-position toggle -->
+    <string name="remember_song_scroll">Remember songs position</string>
+    <string name="remember_song_scroll_desc_on">On: the songs page resumes where you left off. Local position only - no recommendations, no network.</string>
+    <string name="remember_song_scroll_desc_off">Off: the songs page always starts at the top.</string>
+    <!-- 1.4.11 · S12 single-package engine switch -->
+    <string name="settings_section_engine">Playback engine</string>
+    <string name="playback_engine">Playback engine</string>
+    <string name="engine_official">Dual-path (recommended)</string>
+    <string name="engine_official_summary">Zero-cache common formats; self-decode rare formats &amp; USB exclusive</string>
+    <string name="engine_direct">System direct-read</string>
+    <string name="engine_direct_summary">All formats zero-cache instant play, no equalizer / USB exclusive</string>
+    <string name="engine_capability_note">Engine capabilities:\n· System direct-read — near-all formats play instantly with zero cache; the system MediaPlayer gives no decoded PCM, so USB exclusive, equalizer, reverb and float WAV are unavailable here (switches greyed out).\n· Dual-path official — common formats zero-cache direct, rare formats &amp; USB exclusive self-decoded; equalizer and all effects available.\n· Streaming decode — rare formats streamed without disk cache, equalizer and all effects available; seek stability pending device testing.\nSwitching engines rebuilds the player and restores the last song and position.</string>
+    <string name="engine_stream">Streaming decode</string>
+    <string name="engine_stream_summary">Rare formats streamed without disk cache, all effects kept</string>
+    <string name="engine_restart_hint">Applies instantly</string>
+    <string name="engine_restart_note">Applies instantly, restoring the last song and position.</string>
+
+    <!-- Icon button name hint -->
+    <string name="icon_name_hint">Long-press to show icon names</string>
+    <string name="icon_name_hint_summary">When on, long-pressing an icon-only button shows its name</string>
+
+    <!-- Notification -->
+    <string name="notification_channel_name">Playback control</string>
+    <string name="notification_channel_description">Shows the current track and playback controls</string>
+    <string name="notification_action_playback_mode">Playback order</string>
+    <string name="notification_action_favorite">Favourite</string>
+    <string name="notification_action_unfavorite">Unfavourite</string>
+    <string name="notification_progress">%1$s / %2$s</string>
+    <string name="usb_exclusive_direct_note">Switch to dual-path/streaming engine for exclusive output</string>
+    <string name="engine_restore_autoplay">Auto-resume after switch</string>
+    <string name="engine_restore_autoplay_desc_on">On: after restoring the song and position, resume playback automatically.</string>
+    <string name="engine_restore_autoplay_desc_off">Off: restore the song and position but stay paused until you press play.</string>
 </resources>

@@ -32,10 +32,11 @@ import com.smartisan.music.ui.components.SmartisanTouchShield
 import com.smartisan.music.ui.components.rememberSmartisanDrawablePainter
 import com.smartisan.music.ui.components.smartisanClick
 import com.smartisan.music.ui.components.smartisanPainterBackground
+import com.smartisan.music.ui.theme.themedInkRes
 
 internal data class PlaybackMoreActionCallbacks(
     val onAddToPlaylistClick: () -> Unit,
-    val onAddToQueueClick: () -> Unit,
+    val onAudioOutputClick: () -> Unit,
     val onFavoriteToggle: () -> Unit,
     val onShareClick: () -> Unit,
     val onLyricsToggle: () -> Unit,
@@ -217,7 +218,7 @@ private fun MoreActionCell(item: MoreActionItem, modifier: Modifier) {
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color =
-                            colorResource(
+                            themedInkRes(
                                 if (item.selected) R.color.btn_text_color_blue
                                 else R.color.add_nav_text_color
                             ),
@@ -257,10 +258,9 @@ private fun buildMoreActions(
             onClick = callbacks.onAddToPlaylistClick,
         ),
         MoreActionItem(
-            labelRes = R.string.add_to_queue,
-            iconRes = R.drawable.more_select_icon_addplay,
-            pressedIconRes = R.drawable.more_select_icon_addplay_down,
-            onClick = callbacks.onAddToQueueClick,
+            labelRes = R.string.audio_output,
+            iconRes = R.drawable.more_select_icon_audio_output,
+            onClick = callbacks.onAudioOutputClick,
         ),
         MoreActionItem(
             labelRes = if (favoriteEnabled) R.string.cancel_love else R.string.love,
@@ -287,7 +287,12 @@ private fun buildMoreActions(
         ),
         MoreActionItem(
             labelRes = R.string.sleep_timer,
-            iconRes = R.drawable.more_select_icon_timer,
+            iconRes =
+                if (sleepTimerActive) {
+                    R.drawable.more_select_icon_timer_on
+                } else {
+                    R.drawable.more_select_icon_timer
+                },
             selected = sleepTimerActive,
             onClick = callbacks.onSleepTimerClick,
         ),

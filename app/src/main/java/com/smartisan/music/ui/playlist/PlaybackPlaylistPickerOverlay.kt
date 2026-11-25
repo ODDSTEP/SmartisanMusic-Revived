@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.smartisan.music.R
 import com.smartisan.music.data.playlist.UserPlaylistSummary
 import com.smartisan.music.ui.components.*
+import com.smartisan.music.ui.theme.monetContentBackground
+import com.smartisan.music.ui.theme.themedListRowBackground
 
 @Composable
 internal fun PlaybackPlaylistPickerOverlay(
@@ -50,7 +52,7 @@ internal fun PlaybackPlaylistPickerOverlay(
         LazyColumn(
             Modifier.fillMaxWidth()
                 .height((60 * count.coerceAtLeast(1)).coerceAtMost(420).dp)
-                .background(colorResource(R.color.surface_card))
+                .monetContentBackground(colorResource(R.color.surface_card))
         ) {
             if (createNewPlaylistVisible)
                 item(key = "create") {
@@ -82,9 +84,7 @@ private fun PlaylistChoice(title: String, subtitle: String?, onClick: () -> Unit
     Box(
         Modifier.fillMaxWidth()
             .height(60.dp)
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(R.drawable.listview_selector, pressed = pressed)
-            )
+            .themedListRowBackground(pressed = pressed)
             .clickable(interaction, null, onClick = smartisanClick(onClick))
     ) {
         Column(
@@ -105,7 +105,7 @@ private fun PlaylistChoice(title: String, subtitle: String?, onClick: () -> Unit
                         platformStyle = PlatformTextStyle(includeFontPadding = true),
                     ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
             )
             if (subtitle != null)
                 BasicText(
@@ -121,7 +121,7 @@ private fun PlaylistChoice(title: String, subtitle: String?, onClick: () -> Unit
                             platformStyle = PlatformTextStyle(includeFontPadding = true),
                         ),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                 )
         }
         Image(

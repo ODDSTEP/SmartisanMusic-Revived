@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -119,9 +120,12 @@ internal fun PlaybackVisualStage(
         val actionButtonSize = PlaybackActionButtonSize * scale
         val isLyricsPage = currentVisualPage == PlaybackVisualPage.Lyrics
 
+        // [护栏 G-40·1.4.8 落地] 唱盘视觉组（唱盘/唱针/更多按钮）整体下移到约 44% 屏高，
+        // 回到最早版本的位置。用 offset 只改绘制位置、不改测量尺寸 → 唱盘大小不受影响。
         Box(
             modifier =
                 Modifier.width(turntableWidth)
+                    .offset(y = PlaybackVisualStageAnchorOffsetY)
                     .height(turntableWidth * PlaybackVisualStageHeightToWidthRatio)
         ) {
             PressedDrawableButton(

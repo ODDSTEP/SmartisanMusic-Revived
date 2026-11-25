@@ -35,10 +35,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import com.smartisan.music.R
+import com.smartisan.music.ui.library.cardTextureMonet
+import com.smartisan.music.ui.shell.ImmersiveScrollBus
+import com.smartisan.music.ui.shell.ImmersiveLocateEffect
+import com.smartisan.music.ui.shell.ImmersiveActionRowVisibility
+import com.smartisan.music.ui.shell.ChromeSortBarVisibility
 import com.smartisan.music.data.favorite.FavoriteSongRecord
 import com.smartisan.music.playback.LocalPlaybackBrowser
 import com.smartisan.music.playback.replaceQueueAndPlay
@@ -51,17 +55,23 @@ import com.smartisan.music.ui.components.smartisanVerticalScrollbar
 import com.smartisan.music.ui.library.LibraryDivider
 import com.smartisan.music.ui.library.LibraryFooter
 import com.smartisan.music.ui.library.LibraryPlayActions
+import com.smartisan.music.ui.library.LibraryTopCard
 import com.smartisan.music.ui.library.SmartisanMediaArtwork
 import com.smartisan.music.ui.library.libraryListEntrance
 import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.library.rememberAlbumArtworkLoader
 import com.smartisan.music.ui.library.rememberLibraryListEntrance
 import com.smartisan.music.ui.songs.SmartisanPlayingTitle
+import com.smartisan.music.ui.songs.SmartisanSongsSortHeader
 import com.smartisan.music.ui.songs.SongPlaybackState
-import com.smartisan.music.ui.songs.SongTitleNormalizer
+import com.smartisan.music.ui.songs.SongSortMainPlayCount
+import com.smartisan.music.ui.songs.SongSortPreference
+import com.smartisan.music.ui.songs.SongSortSelection
 import com.smartisan.music.ui.songs.qualityBadge
 import com.smartisan.music.ui.songs.rememberSongPlaybackState
-import kotlin.math.roundToInt
+import com.smartisan.music.ui.songs.sortedForSongSort
+import com.smartisan.music.ui.songs.songPlayCount
+import com.smartisan.music.ui.theme.themedListRowBackground
 
 @Composable
 internal fun LovedSongsPage(
@@ -71,6 +81,7 @@ internal fun LovedSongsPage(
     hiddenMediaIds: Set<String>,
     libraryLoaded: Boolean,
     onClose: (() -> Unit)?,
+    onSearchClick: () -> Unit = {},
     onTrackMoreClick: (MediaItem) -> Unit,
     onRemoveFavoriteMediaIds: (Set<String>) -> Unit,
     modifier: Modifier = Modifier,
@@ -78,27 +89,51 @@ internal fun LovedSongsPage(
     val browser = LocalPlaybackBrowser.current
     val artwork = rememberAlbumArtworkLoader()
     val playback = rememberSongPlaybackState()
-    var sortMode by remember { mutableStateOf(LovedSongsSortMode.Time) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // 与歌曲页同一套排序（歌曲名/音质/播放次数/添加时间），并且**读写同一份持久化偏好**（1.2.26）。
+    // 旧版用的是本地 remember 默认值：每次进页面都回到「歌曲名」，与歌曲页不一致。
+    var sortSelection by remember(context) {
+        mutableStateOf(SongSortPreference.load(context))
+    }
+    // 1.2.26：播放次数改读 Room 实时值。旧版用扫描时写进 extras 的静态快照，
+    // 于是同一首歌在歌曲页与「我喜欢」显示的数字不一样，按次数排序结果也不同。
+    val playCountRepository =
+        remember(context) {
+            com.smartisan.music.data.playback.PlaybackStatsRepository.getInstance(
+                context.applicationContext,
+            )
+        }
+    val livePlayCounts by playCountRepository.statsFlow.collectAsState(initial = emptyMap())
+    // [1.4.25·R53] 排序栏 / 播放栏上下对调开关（与歌曲页读同一个 key，默认关）。
+    val sortPlayBarSwap by
+        remember(context) { com.smartisan.music.data.settings.UiSettingsStore(context) }
+            .sortPlayBarSwap
+            .collectAsState(initial = false)
     var editMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var removeConfirm by remember { mutableStateOf(false) }
-    var showSort by remember { mutableStateOf(false) }
-    var sortBounds by remember { mutableStateOf(IntRect.Zero) }
+    LaunchedEffect(sortSelection) {
+        SongSortPreference.save(context, sortSelection)
+    }
     val entries =
-        remember(favoriteRecords, mediaItems, hiddenMediaIds, sortMode) {
-            sortLovedSongEntries(
+        remember(favoriteRecords, mediaItems, hiddenMediaIds, sortSelection, livePlayCounts) {
+            val built =
                 buildLovedSongEntries(
                     favoriteRecords,
                     mediaItems.filterNot { it.mediaId in hiddenMediaIds },
-                ),
-                sortMode,
-                Comparator { left, right ->
-                    SongTitleNormalizer.normalize(left)
-                        .compareTo(SongTitleNormalizer.normalize(right))
-                },
-            )
+                )
+            // 对 mediaItem 用歌曲页排序逻辑排序，保持收藏记录（likedAt）关联
+            val sortedItems =
+                built.map { it.mediaItem }.sortedForSongSort(sortSelection) { item ->
+                    livePlayCounts[item.mediaId] ?: 0L
+                }
+            val byId = built.associateBy { it.mediaItem.mediaId }
+            sortedItems.mapNotNull { byId[it.mediaId] }
         }
     val list = rememberLazyListState()
+    ImmersiveLocateEffect(list) {
+        entries.indexOfFirst { it.mediaItem.mediaId == ImmersiveScrollBus.targetMediaId }
+    }
     val entrance =
         rememberLibraryListEntrance(Unit, active && entries.isNotEmpty()) {
             list.layoutInfo.visibleItemsInfo.size
@@ -106,6 +141,9 @@ internal fun LovedSongsPage(
     LaunchedEffect(entries) {
         selectedIds = selectedIds.intersect(entries.map { it.mediaItem.mediaId }.toSet())
         if (entries.isEmpty()) editMode = false
+    }
+    // 1.2.26：只有切换排序时才滚回顶部。旧版挂在 entries 上，取消一首收藏就会把列表弹回第一首。
+    LaunchedEffect(sortSelection) {
         list.scrollToItem(0)
     }
     fun exitEdit() {
@@ -122,69 +160,99 @@ internal fun LovedSongsPage(
     val touchSlop = LocalViewConfiguration.current.touchSlop
     val checkboxBounds = remember { mutableMapOf<String, Rect>() }
     var listOrigin by remember { mutableStateOf(Offset.Zero) }
-    Column(modifier.fillMaxSize().background(colorResource(R.color.page_background))) {
+    Column(modifier.fillMaxSize().libraryTexture()) {
+        val editAction =
+            SmartisanTitleBarAction(
+                R.drawable.standard_icon_multi_select_selector,
+                stringResource(R.string.edit),
+                onClick = {
+                    editMode = true
+                    selectedIds = emptySet()
+                },
+                enabled = entries.isNotEmpty(),
+            )
         val actions =
-            listOf(
-                SmartisanTitleBarAction(
-                    if (editMode) R.drawable.titlebar_btn_delete_selector
-                    else R.drawable.standard_icon_multi_select_selector,
-                    stringResource(if (editMode) R.string.delete else R.string.edit),
-                    onClick = {
-                        if (editMode) removeConfirm = true
-                        else {
-                            editMode = true
-                            selectedIds = emptySet()
-                        }
-                    },
-                    enabled = if (editMode) selectedIds.isNotEmpty() else entries.isNotEmpty(),
-                ),
-                SmartisanTitleBarAction(
-                    R.drawable.saved_songs_sort_btn_selector,
-                    stringResource(R.string.sort_by_song_name),
-                    onClick = { showSort = true },
-                    enabled = entries.isNotEmpty(),
-                    modifier =
-                        Modifier.onGloballyPositioned {
-                            val rect = it.boundsInWindow()
-                            sortBounds =
-                                IntRect(
-                                    rect.left.roundToInt(),
-                                    rect.top.roundToInt(),
-                                    rect.right.roundToInt(),
-                                    rect.bottom.roundToInt(),
-                                )
-                        },
-                ),
+            listOfNotNull(
+                if (editMode) {
+                    SmartisanTitleBarAction(
+                        R.drawable.titlebar_btn_delete_selector,
+                        stringResource(R.string.delete),
+                        onClick = { removeConfirm = true },
+                        enabled = selectedIds.isNotEmpty(),
+                    )
+                } else {
+                    // 排序已移到顶栏下方的排序条（与歌曲页统一）；右上角改搜索图标
+                    SmartisanTitleBarAction(
+                        R.drawable.search_btn_selector,
+                        stringResource(R.string.tab_local_search),
+                        onClick = onSearchClick,
+                    )
+                },
             )
         SmartisanTitleBar(
             stringResource(R.string.collect_music),
             navigationIcon =
-                if (editMode || onClose != null)
+                if (editMode)
                     SmartisanTitleBarAction(
-                        if (editMode) R.drawable.standard_icon_cancel_selector
-                        else R.drawable.standard_icon_back_selector,
-                        stringResource(if (editMode) R.string.cancel else R.string.back),
-                        onClick = { if (editMode) exitEdit() else onClose?.invoke() },
+                        R.drawable.standard_icon_cancel_selector,
+                        stringResource(R.string.cancel),
+                        onClick = { exitEdit() },
+                    )
+                else if (onClose != null)
+                    SmartisanTitleBarAction(
+                        R.drawable.standard_icon_back_selector,
+                        stringResource(R.string.back),
+                        onClick = { onClose.invoke() },
                     )
                 else null,
+            // 编辑（多选）按钮放左上方、紧跟返回键右侧（与更多里的歌曲/专辑页统一，1.2.16）
+            navigationActions = if (editMode) emptyList() else listOf(editAction),
             actions = actions,
         )
         Column(Modifier.weight(1f).libraryTexture()) {
             if (entries.isNotEmpty()) {
-                Column(Modifier.graphicsLayer { alpha = if (editMode) .22f else 1f }) {
-                    LibraryPlayActions(
-                        !editMode,
-                        {
-                            buildLovedSongsPlayRequest(entries)?.let {
-                                browser.replaceQueueAndPlay(it.mediaItems, it.startIndex)
+                // 1.2.33：与歌曲页/专辑页共用同一个 LibraryTopCard，底部 14dp 投影
+                // 落在列表之上。之前这里只是裸的 background(surface_card)，没有投影分界。
+                // 1.3.7：排序栏只受收起/展开开关控制，播放操作行只受沉浸式控制，互不门禁
+                LibraryTopCard {
+                    // [1.4.25·R53] 与歌曲页同一套对调规则：只换渲染顺序，
+                    // 两栏各自的门禁（收起/展开 vs 沉浸式）完全不动，分隔线始终夹在中间。
+                    val sortBar: @Composable () -> Unit = {
+                        ChromeSortBarVisibility {
+                            SmartisanSongsSortHeader(sortSelection, { sortSelection = it })
+                        }
+                    }
+                    val playBar: @Composable () -> Unit = {
+                        ImmersiveActionRowVisibility {
+                            Column {
+                                if (!sortPlayBarSwap) LibraryDivider()
+                                Column(Modifier.graphicsLayer { alpha = if (editMode) .22f else 1f }) {
+                                    LibraryPlayActions(
+                                        !editMode,
+                                        {
+                                            buildLovedSongsPlayRequest(entries)?.let {
+                                                browser.replaceQueueAndPlay(it.mediaItems, it.startIndex, keepShuffle = true)
+                                            }
+                                        },
+                                        {
+                                            buildLovedSongsShuffleRequest(entries)?.let {
+                                                browser.replaceQueueAndPlayShuffled(it.mediaItems)
+                                            }
+                                        },
+                                        containerColor = colorResource(R.color.surface_card),
+                                    )
+                                }
+                                // [1.4.28] 删除重复分割线：LibraryPlayActions 内部末尾已有一条。
                             }
-                        },
-                        {
-                            buildLovedSongsShuffleRequest(entries)?.let {
-                                browser.replaceQueueAndPlayShuffled(it.mediaItems)
-                            }
-                        },
-                    )
+                        }
+                    }
+                    if (sortPlayBarSwap) {
+                        playBar()
+                        sortBar()
+                    } else {
+                        sortBar()
+                        playBar()
+                    }
                 }
                 LazyColumn(
                     Modifier.fillMaxSize()
@@ -236,11 +304,12 @@ internal fun LovedSongsPage(
                             item.mediaId in selectedIds,
                             artwork,
                             playback,
+                            showPlayCount = sortSelection.main == SongSortMainPlayCount,
                             onClick = {
                                 if (editMode) select(item.mediaId, item.mediaId !in selectedIds)
                                 else
                                     buildLovedSongsPlayRequest(entries, item.mediaId)?.let {
-                                        browser.replaceQueueAndPlay(it.mediaItems, it.startIndex)
+                                        browser.replaceQueueAndPlay(it.mediaItems, it.startIndex, keepShuffle = true)
                                     }
                             },
                             onMore = { onTrackMoreClick(item) },
@@ -264,7 +333,6 @@ internal fun LovedSongsPage(
                 )
         }
     }
-    if (showSort) LovedSongsSortPopup(sortMode, { sortMode = it }, { showSort = false }, sortBounds)
     if (removeConfirm)
         SmartisanModal({ removeConfirm = false }, Modifier.fillMaxWidth(), bottom = true) {
             SmartisanMenuTitleBar(
@@ -273,9 +341,7 @@ internal fun LovedSongsPage(
             )
             Column(
                 Modifier.fillMaxWidth()
-                    .smartisanPainterBackground(
-                        rememberSmartisanDrawablePainter(R.drawable.menu_dialog_background)
-                    )
+                    .cardTextureMonet(R.drawable.menu_dialog_background)
                     .padding(
                         horizontal = dimensionResource(R.dimen.menu_dialog_horizontal_distance)
                     )
@@ -305,6 +371,7 @@ private fun LovedSongRow(
     selected: Boolean,
     artwork: AlbumArtworkLoader,
     playback: SongPlaybackState,
+    showPlayCount: Boolean,
     onClick: () -> Unit,
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
@@ -349,13 +416,7 @@ private fun LovedSongRow(
                 .fillMaxWidth()
                 .height(dimensionResource(R.dimen.listview_item_height))
                 .clipToBounds()
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.listview_selector,
-                        pressed = pressed,
-                        activated = editMode && selected,
-                    )
-                )
+                .themedListRowBackground(pressed = pressed, activated = editMode && selected)
                 .semantics { if (editMode) this.selected = selected }
                 .clickable(
                     interaction,
@@ -431,9 +492,26 @@ private fun LovedSongRow(
                                 platformStyle = PlatformTextStyle(includeFontPadding = true),
                             ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                     )
                 }
+            }
+            if (showPlayCount && !editMode) {
+                // 播放次数排序模式下显示次数（与歌曲页一致，让排序结果可见）
+                BasicText(
+                    item.songPlayCount().toString(),
+                    Modifier.padding(start = 10.dp),
+                    style =
+                        TextStyle(
+                            color =
+                                smartisanPressedTextColor(
+                                    colorResource(R.color.list_text_color_small),
+                                    pressed,
+                                ),
+                            fontSize = smartisanTextSize(R.dimen.text_size_micro),
+                            platformStyle = PlatformTextStyle(includeFontPadding = true),
+                        ),
+                )
             }
             if (!editMode) {
                 val moreInteraction = remember { MutableInteractionSource() }

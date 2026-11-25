@@ -16,27 +16,8 @@ internal sealed class SongListRow {
 internal sealed class SongHeaderKey {
     data class Name(val letter: String) : SongHeaderKey()
 
-    data class Score(val score: Long) : SongHeaderKey()
-
-    data class AddedTime(val bucket: Int) : SongHeaderKey()
-
     fun title(context: Context): String {
-        return when (this) {
-            is Name -> letter
-            is Score ->
-                if (score > 0L) {
-                    context.getString(R.string.song_score_header, score)
-                } else {
-                    context.getString(R.string.nostar)
-                }
-            is AddedTime ->
-                when (bucket) {
-                    AddedTimeBucketToday -> context.getString(R.string.section_today)
-                    AddedTimeBucketLastWeek -> context.getString(R.string.section_day_before)
-                    AddedTimeBucketLastMonth -> context.getString(R.string.section_week_before)
-                    else -> context.getString(R.string.section_month_before)
-                }
-        }
+        return (this as? Name)?.letter.orEmpty()
     }
 }
 
@@ -55,8 +36,6 @@ internal fun buildSongRows(
         val key =
             when (sectionMode) {
                 SongSectionMode.Name -> SongHeaderKey.Name(mediaItem.songSectionLetter())
-                SongSectionMode.Score -> SongHeaderKey.Score(mediaItem.songRating())
-                SongSectionMode.AddedTime -> SongHeaderKey.AddedTime(mediaItem.addedTimeBucket())
                 SongSectionMode.None -> null
             }
         if (key != null && key != previousKey) {

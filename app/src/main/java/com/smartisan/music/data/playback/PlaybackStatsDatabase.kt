@@ -12,6 +12,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "playback_stats")
 internal data class PlaybackStatsEntity(
@@ -32,6 +33,10 @@ internal interface PlaybackStatsDao {
 
     @Query("SELECT mediaId, playCount, score FROM playback_stats")
     fun getStats(): List<PlaybackStatsRow>
+
+    /** 实时观察全量播放次数（Room 数据流，写入后自动发射新快照）。 */
+    @Query("SELECT mediaId, playCount, score FROM playback_stats")
+    fun observeStats(): Flow<List<PlaybackStatsRow>>
 
     @Query("SELECT mediaId, playCount, score FROM playback_stats WHERE mediaId IN (:mediaIds)")
     fun getStats(mediaIds: List<String>): List<PlaybackStatsRow>
@@ -64,6 +69,41 @@ internal interface PlaybackStatsDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(entity: PlaybackStatsEntity): Long
+
+    @Query(
+        """
+        UPDATE playback_stats
+        SET playCount = playCount + COALESCE(
+                (SELECT playCount FROM playback_stats WHERE mediaId = :oldId), 0),
+            score = MAX(score, COALESCE(
+                (SELECT score FROM playback_stats WHERE mediaId = :oldId), 0)),
+            updatedAt = :now
+        WHERE mediaId = :newId
+        """,
+    )
+    suspend fun mergeFromOld(newId: String, oldId: String, now: Long): Int
+
+    @Query("UPDATE OR IGNORE playback_stats SET mediaId = :newId WHERE mediaId = :oldId")
+    suspend fun renameId(oldId: String, newId: String)
+
+    @Query("DELETE FROM playback_stats WHERE mediaId = :oldId")
+    suspend fun deleteAnyById(oldId: String)
+
+    /**
+     * 1.2.26：MediaStore 重新发号后把播放次数/评分迁到新 id。
+     *
+     * 新 id 已有记录时合并（次数相加、评分取高），避免「移动文件后播放次数归零」。
+     */
+    @androidx.room.Transaction
+    suspend fun remapId(oldId: String, newId: String, now: Long) {
+        if (oldId.isBlank() || newId.isBlank() || oldId == newId) return
+        if (mergeFromOld(newId, oldId, now) > 0) {
+            deleteAnyById(oldId)
+        } else {
+            renameId(oldId, newId)
+            deleteAnyById(oldId)
+        }
+    }
 }
 
 @Database(

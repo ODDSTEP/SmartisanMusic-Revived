@@ -159,6 +159,30 @@ internal interface PlaylistDao {
 
     @Query("DELETE FROM user_playlist_entries WHERE playlistId = :playlistId")
     suspend fun clearPlaylistEntries(playlistId: String)
+
+    @Query(
+        """
+        DELETE FROM user_playlist_entries
+        WHERE mediaId = :oldId
+          AND playlistId IN (SELECT playlistId FROM user_playlist_entries WHERE mediaId = :newId)
+        """,
+    )
+    suspend fun deleteOldWhereNewExists(oldId: String, newId: String)
+
+    @Query("UPDATE OR IGNORE user_playlist_entries SET mediaId = :newId WHERE mediaId = :oldId")
+    suspend fun renameEntryId(oldId: String, newId: String)
+
+    @Query("DELETE FROM user_playlist_entries WHERE mediaId = :oldId")
+    suspend fun deleteEntriesByMediaId(oldId: String)
+
+    /** 1.2.26：MediaStore 换号后，把歌单成员从旧 id 迁到新 id（同一歌单里已有新 id 时只留一条）。 */
+    @Transaction
+    suspend fun remapId(oldId: String, newId: String) {
+        if (oldId.isBlank() || newId.isBlank() || oldId == newId) return
+        deleteOldWhereNewExists(oldId, newId)
+        renameEntryId(oldId, newId)
+        deleteEntriesByMediaId(oldId)
+    }
 }
 
 @Database(

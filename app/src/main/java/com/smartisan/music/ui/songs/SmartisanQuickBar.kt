@@ -2,292 +2,145 @@ package com.smartisan.music.ui.songs
 
 import android.graphics.Paint
 import android.graphics.Typeface
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import com.smartisan.music.R
-import com.smartisan.music.ui.components.collectSmartisanPressedAsState
 import com.smartisan.music.ui.components.rememberSmartisanDrawablePainter
-import com.smartisan.music.ui.components.smartisanClick
-import com.smartisan.music.ui.components.smartisanPainterBackground
-import com.smartisan.music.ui.components.smartisanTextSize
-import kotlin.math.PI
-import kotlin.math.cos
+import com.smartisan.music.ui.theme.monetOnSurfaceVariant
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-
-private enum class QuickBarPhase {
-    Hidden,
-    Dragging,
-    Expanded,
-}
 
 private val QuickBarLetters = ('A'..'Z').map(Char::toString) + "#"
-private val QuickBarEasing = Easing { ((cos((it + 1f) * PI) / 2.0) + .5).toFloat() }
 
 /**
- * The strip and its pull-out grid share one drag owner; the surrounding song list stays scrollable.
+ * 右侧字母索引条。
+ *
+ * [1.4.24·R29] 按用户拍板做减法：**删掉左侧滑出的 27 宫格「大字母表」**。
+ * 理由（用户原话）：「点击小字母就能跳，拉出来一个大字母表纯属脱裤子放屁」。
+ *
+ * [1.4.24·R40] 再修一处：原先按住字母条时会把整条 `letters_bar_background`（日间是
+ * 近纯白 9-patch）铺满整条，同时把当前字母设成 `Color.White` —— 结果就是
+ * **整条字母列变成一条白带，白字压在白底上完全看不见**（用户原话：「按住字母列后
+ * 整个字母列都会变白，这样我就看不清字母列了」）。
+ *
+ * 现在按下时**不再铺任何整条背景**，只把当前字母本身加粗 + 换成主题强调色，
+ * 其余字母保持原样 —— 整条字母列在任何时候都清晰可读。
+ *
+ * 保留的行为（用户明确要求）：
+ *  - 点小字母直接跳转；
+ *  - 按住小字母上下拖动，连续切换字母（gesture 内逐帧算 letterAt）；
+ *  - 触摸时当前字母高亮 + 加粗（这是文字反馈，不是被删的白色块）；
+ *  - 无障碍逐字母自定义动作。
+ *
+ * 顺带删掉字母条左侧的渐变阴影（R30 用户确认「阴影一并删」），只留条本身的背景。
  */
 @Composable
 internal fun SmartisanQuickBar(onLetter: (String) -> Unit, modifier: Modifier = Modifier) {
-    val resources = LocalResources.current
-    val density = LocalDensity.current
-    val shadow = rememberSmartisanDrawablePainter(R.drawable.letters_bar_background_shadow)
     val background = rememberSmartisanDrawablePainter(R.drawable.letters_bar_background)
-    val shadowWidth = shadow.intrinsicSize.width.roundToInt().coerceAtLeast(0)
     val stripWidth = background.intrinsicSize.width.roundToInt().coerceAtLeast(1)
-    val columns = resources.getInteger(R.integer.smartisan_letterbar_gridview_column_num)
-    val columnWidth = resources.getDimensionPixelSize(R.dimen.quickbar_ex_grid_column_width)
-    val spacing = resources.getDimensionPixelSize(R.dimen.smartisan_quickbar_grid_item_space)
-    val gridWidth = columns * columnWidth + (columns - 1) * spacing
-    val minimumDrag = resources.getDimensionPixelSize(R.dimen.smartisan_quickbar_min_distance)
+    val density = LocalDensity.current
     val latestLetter by rememberUpdatedState(onLetter)
-    val scope = rememberCoroutineScope()
-    var opening by remember(gridWidth) { mutableFloatStateOf(0f) }
-    var phase by remember(gridWidth) { mutableStateOf(QuickBarPhase.Hidden) }
     var touchedLetter by remember { mutableIntStateOf(-1) }
-    var settling by remember { mutableStateOf<Job?>(null) }
-    var inputOrigin by remember { mutableStateOf(Offset.Zero) }
-    val showBackground = phase != QuickBarPhase.Hidden || touchedLetter >= 0
-    val moveTo: (Boolean) -> Unit = { expand ->
-        settling?.cancel()
-        touchedLetter = -1
-        phase = QuickBarPhase.Dragging
-        settling = scope.launch {
-            val target = if (expand) gridWidth.toFloat() else 0f
-            Animatable(opening).animateTo(target, tween(200, easing = QuickBarEasing)) {
-                opening = value
-            }
-            opening = target
-            phase = if (expand) QuickBarPhase.Expanded else QuickBarPhase.Hidden
-        }
-    }
-    val latestMoveTo by rememberUpdatedState(moveTo)
-    val expandLabel = stringResource(R.string.quickbar_expand)
-    val collapseLabel = stringResource(R.string.quickbar_collapse)
     val description = stringResource(R.string.quickbar_description)
 
-    // Only the revealed portion participates in hit testing. In particular, the collapsed
-    // shadow is decoration, so a song under that shadow still receives its normal tap.
     Layout(
-        modifier =
-            modifier
-                .width(with(density) { (shadowWidth + stripWidth + opening).toDp() })
-                .clipToBounds(),
+        modifier = modifier.width(with(density) { stripWidth.toDp() }),
         content = {
-            Canvas(Modifier.fillMaxHeight()) {
-                if (showBackground) with(shadow) { draw(size) }
-            }
-            Layout(
+            QuickBarStrip(
+                touched = touchedLetter,
                 modifier =
                     Modifier.fillMaxHeight()
-                        .clipToBounds()
-                        .onGloballyPositioned { inputOrigin = it.positionInRoot() }
-                        .pointerInput(gridWidth, stripWidth, minimumDrag) {
+                        .pointerInput(stripWidth) {
                             awaitEachGesture {
                                 val down =
                                     awaitFirstDown(
                                         requireUnconsumed = false,
                                         pass = PointerEventPass.Initial,
                                     )
-                                val downRaw = down.position + inputOrigin
-                                val openingAtDown = opening
-                                val hiddenAtDown = phase == QuickBarPhase.Hidden
-                                var trackingStrip = down.position.x < stripWidth
-                                var dragging = false
-                                var previousMoveX = downRaw.x
-                                var currentMoveX = downRaw.x
-                                var released = false
-                                if (trackingStrip) {
-                                    touchedLetter =
-                                        QuickBarGeometry.letterAt(down.position.y, size.height)
-                                    latestLetter(QuickBarLetters[touchedLetter])
-                                    down.consume()
-                                }
+                                if (down.position.x >= stripWidth) return@awaitEachGesture
+                                // 按下即跳：不要求用户先"激活"字母条，和原行为一致。
+                                touchedLetter =
+                                    QuickBarGeometry.letterAt(down.position.y, size.height)
+                                latestLetter(QuickBarLetters[touchedLetter])
+                                down.consume()
                                 try {
                                     while (true) {
-                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val event =
+                                            awaitPointerEvent(PointerEventPass.Initial)
                                         val change =
                                             event.changes.firstOrNull { it.id == down.id } ?: break
                                         if (!change.pressed) {
-                                            released = true
-                                            if (dragging) {
-                                                change.consume()
-                                                latestMoveTo(
-                                                    QuickBarGeometry.expandsOnRelease(
-                                                        (shadowWidth + stripWidth).toFloat(),
-                                                        opening,
-                                                        currentMoveX - previousMoveX,
-                                                    )
-                                                )
-                                            } else if (trackingStrip) change.consume()
+                                            change.consume()
                                             break
                                         }
-                                        val raw = change.position + inputOrigin
-                                        val dx = raw.x - downRaw.x
-                                        val dy = raw.y - downRaw.y
-                                        if (event.type == PointerEventType.Move) {
-                                            previousMoveX = currentMoveX
-                                            currentMoveX = raw.x
+                                        // 按住上下拖动：逐帧按 y 重新定位字母。
+                                        val index =
+                                            QuickBarGeometry.letterAt(change.position.y, size.height)
+                                        if (index != touchedLetter) {
+                                            touchedLetter = index
+                                            latestLetter(QuickBarLetters[index])
                                         }
-                                        if (
-                                            !dragging &&
-                                                QuickBarGeometry.startsDrag(
-                                                    dx,
-                                                    dy,
-                                                    minimumDrag,
-                                                    hiddenAtDown,
-                                                )
-                                        ) {
-                                            settling?.cancel()
-                                            touchedLetter = -1
-                                            trackingStrip = false
-                                            dragging = true
-                                            phase = QuickBarPhase.Dragging
-                                        }
-                                        if (dragging) {
-                                            opening =
-                                                (openingAtDown - dx).coerceIn(
-                                                    0f,
-                                                    gridWidth.toFloat(),
-                                                )
-                                            change.consume()
-                                        } else if (trackingStrip) {
-                                            val index =
-                                                QuickBarGeometry.letterAt(
-                                                    change.position.y,
-                                                    size.height,
-                                                )
-                                            if (index != touchedLetter) {
-                                                touchedLetter = index
-                                                latestLetter(QuickBarLetters[index])
-                                            }
-                                            change.consume()
-                                        }
+                                        change.consume()
                                     }
                                 } finally {
                                     touchedLetter = -1
-                                    if (dragging && !released) latestMoveTo(false)
                                 }
                             }
-                        },
-                content = {
-                    QuickBarStrip(
-                        background,
-                        showBackground,
-                        touchedLetter,
-                        Modifier.semantics {
+                        }
+                        .semantics {
                             contentDescription = description
                             role = Role.Button
-                            onClick(
-                                if (phase == QuickBarPhase.Expanded) collapseLabel else expandLabel
-                            ) {
-                                latestMoveTo(phase != QuickBarPhase.Expanded)
-                                true
-                            }
-                            customActions = QuickBarLetters.map { letter ->
-                                CustomAccessibilityAction(letter) {
-                                    latestLetter(letter)
-                                    true
+                            customActions =
+                                QuickBarLetters.map { letter ->
+                                    CustomAccessibilityAction(letter) {
+                                        latestLetter(letter)
+                                        true
+                                    }
                                 }
-                            }
                         },
-                    )
-                    QuickBarGrid(
-                        columns,
-                        columnWidth,
-                        spacing,
-                        enabled = phase != QuickBarPhase.Hidden,
-                        onClick = { index ->
-                            if (index < 26) latestLetter(QuickBarLetters[index])
-                            latestMoveTo(false)
-                        },
-                    )
-                },
-            ) { measurables, constraints ->
-                val height = constraints.maxHeight
-                val strip = measurables[0].measure(Constraints.fixed(stripWidth, height))
-                val grid = measurables[1].measure(Constraints.fixed(gridWidth, height))
-                layout(constraints.maxWidth, height) {
-                    strip.place(0, 0)
-                    grid.place(stripWidth, 0)
-                }
-            }
+            )
         },
     ) { measurables, constraints ->
         val height = constraints.maxHeight
-        val shadowPlaceable = measurables[0].measure(Constraints.fixed(shadowWidth, height))
-        val input =
-            measurables[1].measure(
-                Constraints.fixed((constraints.maxWidth - shadowWidth).coerceAtLeast(1), height)
-            )
-        layout(constraints.maxWidth, height) {
-            shadowPlaceable.place(0, 0)
-            input.place(shadowWidth, 0)
-        }
+        val strip = measurables[0].measure(Constraints.fixed(stripWidth, height))
+        layout(stripWidth, height) { strip.place(0, 0) }
     }
 }
 
 @Composable
 private fun QuickBarStrip(
-    background: Painter,
-    showBackground: Boolean,
     touched: Int,
     modifier: Modifier,
 ) {
@@ -296,9 +149,16 @@ private fun QuickBarStrip(
     val minimumHeight =
         resources.getDimensionPixelSize(R.dimen.letters_bar_single_letter_min_height)
     val fontSize = resources.getDimension(R.dimen.letters_bar_letter_font_size)
-    val noChosen = colorResource(R.color.no_chosen_letter_font_color)
-    val chosen = colorResource(R.color.has_chosen_letter_font_color)
+    // [v16·谷歌 M3] 字母栏次级文字取 onSurfaceVariant：莫奈取色开启时带主题色相的中性灰，
+    // 关闭回退官方 no_chosen_letter_font_color。
+    val noChosen = monetOnSurfaceVariant() ?: colorResource(R.color.no_chosen_letter_font_color)
+    // [1.4.25·R45] 按下字母要有明显选中态：原厂 `letters_bar_highlight_icon`
+    // （60×60px=20dp 实心圆，日间深灰 #191921 / 夜间纯白）铺在字母下面，
+    // 字母再用反色画上去 —— 用户图4 要的就是「原位实心圆 + 反白字」。
+    // 之前只加粗换色，深色背景下几乎看不出按到了哪个字母。
     val highlight = rememberSmartisanDrawablePainter(R.drawable.letters_bar_highlight_icon)
+    val darkMode = androidx.compose.foundation.isSystemInDarkTheme()
+    val onHighlightColor = if (darkMode) Color(0xFF191921) else Color.White
     val textPaint =
         remember(fontSize) {
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -308,26 +168,27 @@ private fun QuickBarStrip(
             }
         }
     Canvas(modifier.fillMaxSize()) {
-        if (showBackground) with(background) { draw(size) }
+        // [1.4.24·R40] 按下时**不再铺整条背景**。
+        // 旧实现在这里 `draw(letters_bar_background)`（日间是近纯白的 9-patch），
+        // 会把整条字母列刷成一条白带，同时当前字母又被设成 Color.White → 白字压白底，
+        // 整条字母列等于消失（用户原话：「按住字母列后会整个字母列都会变白，
+        // 这样我就看不清字母列了」）。
+        // 现在只改当前字母本身的颜色与字重，其余字母一律保持常态。
         val indexes =
             QuickBarGeometry.visibleLetters(size.height.roundToInt(), margin, minimumHeight)
         val available = (size.height.roundToInt() - margin * 2).coerceAtLeast(1)
         val letterHeight = max(available.toFloat() / indexes.size, minimumHeight.toFloat())
         indexes.forEachIndexed { visibleIndex, letterIndex ->
             val centerY = margin + visibleIndex * letterHeight + letterHeight / 2f
-            if (letterIndex == touched) {
-                val intrinsic = highlight.intrinsicSize
-                translate((size.width - intrinsic.width) / 2f, centerY - intrinsic.height / 2f) {
-                    with(highlight) { draw(intrinsic) }
+            val isTouched = letterIndex == touched
+            if (isTouched) {
+                val diameter = minOf(letterHeight * 0.98f, 22.dp.toPx())
+                translate(left = (size.width - diameter) / 2f, top = centerY - diameter / 2f) {
+                    with(highlight) { draw(size = Size(diameter, diameter)) }
                 }
             }
-            textPaint.color =
-                when {
-                    letterIndex == touched -> Color.White
-                    showBackground -> chosen
-                    else -> noChosen
-                }.toArgb()
-            textPaint.isFakeBoldText = letterIndex == touched
+            textPaint.color = (if (isTouched) onHighlightColor else noChosen).toArgb()
+            textPaint.isFakeBoldText = isTouched
             val metrics = textPaint.fontMetricsInt
             val baseline = centerY - (metrics.bottom - metrics.top) / 2f - metrics.top
             drawIntoCanvas {
@@ -336,86 +197,6 @@ private fun QuickBarStrip(
                     size.width / 2f,
                     baseline,
                     textPaint,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickBarGrid(
-    columns: Int,
-    columnWidth: Int,
-    spacing: Int,
-    enabled: Boolean,
-    onClick: (Int) -> Unit,
-) {
-    val collapseDescription = stringResource(R.string.quickbar_collapse)
-    Layout(
-        modifier =
-            Modifier.background(colorResource(R.color.quickbar_grid_background))
-                .then(if (enabled) Modifier else Modifier.clearAndSetSemantics {}),
-        content = {
-            repeat(27) { index ->
-                val interaction = remember { MutableInteractionSource() }
-                val pressed by interaction.collectSmartisanPressedAsState()
-                Box(
-                    Modifier.smartisanPainterBackground(
-                            rememberSmartisanDrawablePainter(
-                                if ((index / columns) % 2 == 0)
-                                    R.drawable.quickbar_ex_alphabet_text_light_colorlist
-                                else R.drawable.quickbar_ex_alphabet_text_dark_colorlist,
-                                pressed = pressed,
-                            )
-                        )
-                        .clickable(
-                            interaction,
-                            null,
-                            enabled = enabled,
-                            role = Role.Button,
-                            onClick = smartisanClick { onClick(index) },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (index == 26)
-                        Image(
-                            rememberSmartisanDrawablePainter(R.drawable.letters_bar_arrow),
-                            collapseDescription,
-                        )
-                    else
-                        BasicText(
-                            QuickBarLetters[index],
-                            style =
-                                TextStyle(
-                                    color = colorResource(R.color.setting_item_summary_text_color),
-                                    fontSize =
-                                        smartisanTextSize(
-                                            R.dimen.smartisan_quickbarex_gridview_font_size
-                                        ),
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    platformStyle = PlatformTextStyle(includeFontPadding = true),
-                                ),
-                        )
-                }
-            }
-        },
-    ) { measurables, constraints ->
-        val height = constraints.maxHeight
-        val placeables = measurables.mapIndexed { index, measurable ->
-            measurable.measure(
-                Constraints.fixed(
-                    columnWidth,
-                    QuickBarGeometry.cellHeight(index, height, columns, spacing),
-                )
-            )
-        }
-        val rowHeight = QuickBarGeometry.cellHeight(0, height, columns, spacing)
-        layout(constraints.maxWidth, height) {
-            placeables.forEachIndexed { index, placeable ->
-                placeable.place(
-                    (index % columns) * (columnWidth + spacing),
-                    (index / columns) * (rowHeight + spacing),
                 )
             }
         }

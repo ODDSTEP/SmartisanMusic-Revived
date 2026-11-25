@@ -200,7 +200,7 @@ private fun ArtistAllSongsPage(
                 item.albumDetailArtistText(artistSettings),
                 showArtist = true,
                 playback = playback,
-                onClick = { browser.replaceQueueAndPlay(sortedSongs, index) },
+                onClick = { browser.replaceQueueAndPlay(sortedSongs, index, keepShuffle = true) },
                 onMoreClick = onTrackMoreClick,
             )
             LibraryDivider()
@@ -239,7 +239,7 @@ private fun ArtistAllSongsHeader(artistName: String, enabled: Boolean, onShuffle
                         platformStyle = PlatformTextStyle(includeFontPadding = true),
                     ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
             )
             BasicText(
                 artistName,
@@ -250,7 +250,7 @@ private fun ArtistAllSongsHeader(artistName: String, enabled: Boolean, onShuffle
                         platformStyle = PlatformTextStyle(includeFontPadding = true),
                     ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
             )
         }
         LibraryIconButton(

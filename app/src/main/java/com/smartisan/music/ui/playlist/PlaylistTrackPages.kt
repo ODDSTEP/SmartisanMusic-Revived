@@ -40,6 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.smartisan.music.R
+import com.smartisan.music.ui.library.libraryTexture
+import com.smartisan.music.ui.shell.ImmersiveScrollBus
+import com.smartisan.music.ui.shell.ImmersiveLocateEffect
+import com.smartisan.music.ui.shell.ImmersiveActionRowVisibility
 import com.smartisan.music.data.playlist.UserPlaylistDetail
 import com.smartisan.music.playback.LocalAudioLibrary
 import com.smartisan.music.ui.components.*
@@ -53,6 +57,8 @@ import com.smartisan.music.ui.songs.SongPlaybackState
 import com.smartisan.music.ui.songs.qualityBadge
 import com.smartisan.music.ui.songs.rememberSongPlaybackState
 import kotlin.math.roundToInt
+import com.smartisan.music.ui.theme.themedListRowBackground
+import com.smartisan.music.ui.theme.themedInkRes
 
 @Composable
 internal fun PlaylistDetailPage(
@@ -78,14 +84,18 @@ internal fun PlaylistDetailPage(
     val listState = rememberLazyListState()
     val playback = rememberSongPlaybackState(browser)
     var preview by remember(tracks) { mutableStateOf(tracks) }
+    ImmersiveLocateEffect(listState) {
+        preview.indexOfFirst { it.mediaId == ImmersiveScrollBus.targetMediaId }
+    }
     val dragState = rememberSmartisanListDragState(tracks)
     val latestTracks by rememberUpdatedState(tracks)
     val latestReorder by rememberUpdatedState(onReorderTracks)
     val density = LocalDensity.current
     val config = LocalViewConfiguration.current
     val handle = rememberSmartisanDrawablePainter(R.drawable.btn_drag_selector)
-    val shadowTopPainter = rememberSmartisanDrawablePainter(R.drawable.shadow_top)
-    val shadowBottomPainter = rememberSmartisanDrawablePainter(R.drawable.shadow_bottom)
+    // [1.4.25·R49-③] 语义化命名：这是「滚动渐隐」不是投影，见 ScrollFadeEdge。
+    val shadowTopPainter = ScrollFadeEdge.topPainter()
+    val shadowBottomPainter = ScrollFadeEdge.bottomPainter()
     val shadowTop = shadowTopPainter.intrinsicSize.height.roundToInt()
     val shadowBottom = shadowBottomPainter.intrinsicSize.height.roundToInt()
     val rightMargin =
@@ -102,11 +112,10 @@ internal fun PlaylistDetailPage(
     Column(
         modifier
             .fillMaxSize()
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(R.drawable.account_background)
-            )
+            .libraryTexture()
     ) {
         if (active) {
+            ImmersiveActionRowVisibility {
             PlaylistDetailHeader(
                 tracks.size,
                 selectedTrackIds.size,
@@ -117,6 +126,7 @@ internal fun PlaylistDetailPage(
                 onAddOrRemoveClick,
                 onToggleAll,
             )
+            }
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 if (!libraryLoading && tracks.isEmpty())
                     LibraryBlank(
@@ -334,13 +344,7 @@ private fun PlaylistTrackRow(
                 .fillMaxWidth()
                 .height(dimensionResource(R.dimen.listview_item_height))
                 .clipToBounds()
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.listview_selector,
-                        pressed = pressed,
-                        activated = editMode && checked,
-                    )
-                )
+                .themedListRowBackground(pressed = pressed, activated = editMode && checked)
                 .semantics { if (editMode) selected = checked }
                 .clickable(
                     source,
@@ -405,7 +409,7 @@ private fun PlaylistTrackRow(
                                     platformStyle = PlatformTextStyle(includeFontPadding = true),
                                 ),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Clip,
                         )
                     }
                 }
@@ -579,9 +583,12 @@ private fun PlaylistDetailHeader(
                             stringResource(
                                 if (removing) R.string.delete_track else R.string.add_track
                             ),
-                            Modifier.padding(end = 10.dp),
+                            Modifier
+                                .padding(end = 10.dp)
+                                .align(Alignment.CenterVertically),
                             style =
                                 TextStyle(
+                                    // 1.3.9：蓝底蓝字按钮不随主题染色，恢复默认蓝字。
                                     color =
                                         colorResource(
                                             if (removing) R.color.btn_text_color_red
@@ -590,7 +597,8 @@ private fun PlaylistDetailHeader(
                                     fontSize = smartisanTextSize(R.dimen.button_text_size),
                                     fontWeight = FontWeight.Bold,
                                     textDirection = textDirection,
-                                    platformStyle = PlatformTextStyle(includeFontPadding = true),
+                                    // 1.3.9：去掉字体额外留白，让文字在 30dp 行内垂直居中。
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
                                 ),
                         )
                     }
@@ -642,6 +650,7 @@ private fun qualityBadge(item: MediaItem): Int? =
         "aiff" -> R.drawable.audio_quality_aiff
         "alac" -> R.drawable.audio_quality_alac
         "cue" -> R.drawable.audio_quality_cue
+        "dsd" -> R.drawable.audio_quality_dsd
         else -> null
     }
 

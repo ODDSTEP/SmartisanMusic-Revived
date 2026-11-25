@@ -61,6 +61,19 @@ internal class PlaybackSessionStateStore(private val context: Context) {
 
     suspend fun load(): PlaybackSessionSnapshot = snapshot.first()
 
+    /** [1.4.24] 崩溃恢复：清空"上次播放快照"，下次启动不再自动加载崩溃曲。 */
+    suspend fun clear() {
+        context.playbackSessionStateDataStore.edit { preferences ->
+            preferences.remove(MediaIdsKey)
+            preferences.remove(QueueItemsKey)
+            preferences.remove(CurrentMediaIdKey)
+            preferences.remove(CurrentIndexKey)
+            preferences.remove(PositionMsKey)
+            preferences.remove(RepeatModeKey)
+            preferences.remove(ShuffleModeEnabledKey)
+        }
+    }
+
     suspend fun save(snapshot: PlaybackSessionSnapshot) {
         context.playbackSessionStateDataStore.edit { preferences ->
             preferences[MediaIdsKey] = snapshot.mediaIds.encodeMediaIds()

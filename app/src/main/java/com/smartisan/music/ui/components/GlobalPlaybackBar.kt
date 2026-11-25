@@ -19,6 +19,7 @@ import androidx.media3.common.Player
 import com.smartisan.music.data.favorite.FavoriteSongsRepository
 import com.smartisan.music.isExternalAudioLaunchItem
 import com.smartisan.music.playback.LocalPlaybackController
+import com.smartisan.music.playback.PlaybackIntentAudit
 import com.smartisan.music.playback.artworkRequestKey
 import com.smartisan.music.ui.shell.playback.PlaybackBar
 import com.smartisan.music.ui.shell.playback.loadArtworkBitmap
@@ -85,13 +86,15 @@ fun GlobalPlaybackBar(
             }
         },
         onPrevious = {
-            controller.seekToPrevious()
+            // 1.3.2：Media3 的 seekToPrevious() 在播放超过 3 秒时只把当前曲倒回开头，
+            // 表现为「上一曲点了没反应」。直接切到上一首媒体项。
+            controller.seekToPreviousMediaItem()
         },
         onPlayPause = {
             if (snapshot.isPlaybackActive) {
-                controller.pause()
+                PlaybackIntentAudit.pause(controller, "全局小播放条·播放/暂停按钮")?.pause()
             } else {
-                controller.play()
+                PlaybackIntentAudit.play(controller, "全局小播放条·播放/暂停按钮")?.play()
             }
         },
         onNext = {
@@ -101,4 +104,4 @@ fun GlobalPlaybackBar(
     )
 }
 
-private val GlobalPlaybackBarHeight = 67.dp
+private val GlobalPlaybackBarHeight = 61.dp

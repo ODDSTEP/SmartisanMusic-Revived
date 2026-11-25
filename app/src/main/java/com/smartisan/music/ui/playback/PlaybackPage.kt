@@ -5,7 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -43,14 +44,18 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.SessionResult
+import com.smartisan.music.ui.components.smartisanMarquee
 import com.smartisan.music.R
 import com.smartisan.music.data.favorite.FavoriteSongsRepository
+import com.smartisan.music.data.memory.ListeningMemory
+import com.smartisan.music.data.memory.ListeningMemoryStore
 import com.smartisan.music.data.settings.PlaybackSettings
 import com.smartisan.music.playback.LocalPlaybackController
 import com.smartisan.music.playback.await
 import com.smartisan.music.playback.setTrackRating
 import com.smartisan.music.ui.components.SmartisanTitleBar
 import com.smartisan.music.ui.components.SmartisanTitleBarAction
+import com.smartisan.music.ui.theme.monetSurface
 import com.smartisan.music.ui.shell.titlebar.TitleBarShadow
 import com.smartisan.music.ui.songs.songRating
 import kotlinx.coroutines.launch
@@ -60,7 +65,6 @@ internal fun PlaybackPage(
     playbackSettings: PlaybackSettings,
     ratingOverrides: Map<String, Int>,
     onRequestAddToPlaylist: (List<MediaItem>) -> Unit,
-    onRequestAddToQueue: (List<MediaItem>) -> Unit,
     onScratchEnabledChange: (Boolean) -> Unit,
     onTrackRatingChanged: (String, Int) -> Unit,
     onFavoriteToggle: (MediaItem) -> Unit,
@@ -75,14 +79,28 @@ internal fun PlaybackPage(
             FavoriteSongsRepository.getInstance(context.applicationContext)
         }
     val favoriteIds by favoriteRepository.observeFavoriteIds().collectAsState(initial = emptySet())
+    // 1.3.2：播放队列「历史」必须是真正播放过的歌。旧实现拿 currentIndex 之前的队列项
+    // 充数，跳到第 12 首时前 11 首全成了「历史」，全是没听过的；上一首也不一定在里面。
+    // ListeningMemoryStore 由 PlaybackService 在每首歌第一次真正出声时写入，带时间戳。
+    val listeningMemoryStore =
+        remember(context.applicationContext) {
+            ListeningMemoryStore(context.applicationContext)
+        }
+    val listeningMemory by
+        listeningMemoryStore.memory.collectAsState(initial = ListeningMemory())
+    val recentPlayedIds =
+        listeningMemory.tracks
+            .sortedByDescending { it.lastPlayedAt }
+            .map { it.mediaId }
     var pendingRatingRequests by remember { mutableStateOf(emptyMap<String, Int>()) }
     var queueSnapshot by
-        remember(controller, context, favoriteIds, ratingOverrides) {
+        remember(controller, context, favoriteIds, ratingOverrides, recentPlayedIds) {
             mutableStateOf(
                 controller.toPlaybackQueueSnapshot(
                     context = context,
                     favoriteIds = favoriteIds,
                     ratingOverrides = ratingOverrides,
+                    recentPlayedIds = recentPlayedIds,
                 )
             )
         }
@@ -96,7 +114,7 @@ internal fun PlaybackPage(
         }
     val titleTopPadding = statusBarHeight + titleContentHeight
 
-    DisposableEffect(controller, context, favoriteIds, ratingOverrides) {
+    DisposableEffect(controller, context, favoriteIds, ratingOverrides, recentPlayedIds) {
         val playbackController = controller ?: return@DisposableEffect onDispose {}
         val listener =
             object : Player.Listener {
@@ -106,6 +124,7 @@ internal fun PlaybackPage(
                             context = context,
                             favoriteIds = favoriteIds,
                             ratingOverrides = ratingOverrides,
+                            recentPlayedIds = recentPlayedIds,
                         )
                 }
             }
@@ -115,6 +134,7 @@ internal fun PlaybackPage(
                 context = context,
                 favoriteIds = favoriteIds,
                 ratingOverrides = ratingOverrides,
+                recentPlayedIds = recentPlayedIds,
             )
         onDispose {
             playbackController.removeListener(listener)
@@ -125,8 +145,18 @@ internal fun PlaybackPage(
         queueVisible = false
     }
 
+    // 根节点消费未被子控件处理的点击：大播放页是全屏 overlay（zIndex 高于搜索页等下层），
+    // 若根部不可命中，顶部空白区的点击会穿透到下层的搜索框/列表，造成"隔空编辑文字"的泄漏
+    val blockFallThroughInteraction = remember { MutableInteractionSource() }
     BoxWithConstraints(
-        modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background))
+        modifier =
+            modifier.fillMaxSize()
+                .background(monetSurface(R.color.page_background, 0.10f))
+                .clickable(
+                    interactionSource = blockFallThroughInteraction,
+                    indication = null,
+                    onClick = {},
+                )
     ) {
         val screenHeightPx = with(density) { maxHeight.roundToPx() }
         val playerOffsetY =
@@ -193,6 +223,7 @@ internal fun PlaybackPage(
                                 context = context,
                                 favoriteIds = favoriteIds,
                                 ratingOverrides = ratingOverrides,
+                                recentPlayedIds = recentPlayedIds,
                             )
                             .upcoming
                             .map { track -> track.queueIndex }
@@ -230,7 +261,6 @@ internal fun PlaybackPage(
             PlaybackScreen(
                 playbackSettings = playbackSettings,
                 onRequestAddToPlaylist = onRequestAddToPlaylist,
-                onRequestAddToQueue = onRequestAddToQueue,
                 onScratchEnabledChange = onScratchEnabledChange,
                 onFavoriteToggle = onFavoriteToggle,
                 onCollapse = onCollapse,
@@ -302,7 +332,7 @@ private fun PlaybackCenterTitle(title: String, artist: String) {
         // its 16..20sp auto-size range therefore stays at 20sp before marquee starts.
         BasicText(
             title,
-            Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE),
+            Modifier.fillMaxWidth().smartisanMarquee(),
             style =
                 TextStyle(
                     fontSize = 20.sp,
@@ -325,7 +355,7 @@ private fun PlaybackCenterTitle(title: String, artist: String) {
                         platformStyle = PlatformTextStyle(includeFontPadding = true),
                     ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Clip,
             )
     }
 }
@@ -383,6 +413,7 @@ private fun Player?.toPlaybackQueueSnapshot(
     context: Context,
     favoriteIds: Set<String>,
     ratingOverrides: Map<String, Int>,
+    recentPlayedIds: List<String>,
 ): PlaybackQueueSnapshot {
     val player = this ?: return PlaybackQueueSnapshot()
     val itemCount = player.mediaItemCount
@@ -419,8 +450,18 @@ private fun Player?.toPlaybackQueueSnapshot(
                 queueIndex = currentIndex.coerceAtLeast(0),
                 ratingOverrides = ratingOverrides,
             )
+    // 1.3.2：历史按「真正播放过」的时间倒序取，只保留仍在当前队列里的项，
+    // 保证 queueIndex 有效、点击定位不会跳到错误位置。
+    val history =
+        recentPlayedIds
+            .asSequence()
+            .filter { it != current?.mediaId }
+            .distinct()
+            .mapNotNull { id -> tracks.firstOrNull { it.mediaId == id } }
+            .take(QueueHistoryLimit)
+            .toList()
     return PlaybackQueueSnapshot(
-        history = tracks.filter { it.queueIndex < currentIndex }.takeLast(QueueHistoryLimit),
+        history = history,
         current = current,
         upcoming =
             player.toUpcomingQueueTracks(

@@ -42,6 +42,7 @@ import com.smartisan.music.data.playlist.UserPlaylistDetail
 import com.smartisan.music.playback.LocalPlaybackBrowser
 import com.smartisan.music.playback.replaceQueueAndPlay
 import com.smartisan.music.playback.replaceQueueAndPlayShuffled
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.components.withSelection
 import com.smartisan.music.ui.shell.PageStackTransition
 import com.smartisan.music.ui.shell.titlebar.TitleBarShadow
@@ -236,7 +237,7 @@ internal fun PlaylistPage(
             dimensionResource(R.dimen.title_bar_height)
     val titleShadowHeight = dimensionResource(R.dimen.title_bar_shadow_height)
 
-    Box(modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background))) {
+    Box(modifier = modifier.fillMaxSize().libraryTexture()) {
         Column(modifier = Modifier.fillMaxSize()) {
             PlaylistTitleArea(
                 target = target,
@@ -404,7 +405,7 @@ internal fun PlaylistPage(
                                         selectedTrackIds.togglePlaylistSelection(item.mediaId)
                                     return@PlaylistDetailPage
                                 }
-                                browser.replaceQueueAndPlay(detailSnapshot.tracks, index)
+                                browser.replaceQueueAndPlay(detailSnapshot.tracks, index, keepShuffle = true)
                             },
                             onTrackMoreClick = onTrackMoreClick,
                             modifier = Modifier.fillMaxSize(),
@@ -447,7 +448,7 @@ internal fun PlaylistPage(
         ) {
             val currentAddModeTarget = addModeTarget ?: return@AnimatedVisibility
             Column(
-                modifier = Modifier.fillMaxSize().background(colorResource(R.color.page_background))
+                modifier = Modifier.fillMaxSize().libraryTexture()
             ) {
                 PlaylistAddModeTitleArea(
                     target = currentAddModeTarget,

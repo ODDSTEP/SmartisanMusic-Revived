@@ -9,6 +9,9 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
 import android.os.SystemClock
+import com.smartisan.music.playback.ApeTranscoder
+import com.smartisan.music.playback.UsbExclusiveSinkRef
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.Executors
@@ -28,8 +31,11 @@ private const val ScratchMinDeltaTimeMs = 8L
 private const val ScratchMaxDeltaTimeMs = 72L
 private const val ScratchOutputFrames = 384
 private const val ScratchOutputChannels = 2
-private const val ScratchOutputGain = 1.08f
+// 1.3.2：原 1.08f 会把样本硬削到 Short 边界，长按搓碟时叠加成刺耳破音
+private const val ScratchOutputGain = 0.95f
 private const val ScratchMaxPlaybackRatePermille = 6_000
+// 1.3.2：手指按住不动时 Compose 不再产生 pointer event，靠这个超时把刮擦速率归零
+private const val ScratchMotionIdleTimeoutMs = 80L
 
 internal class ScratchSoundController(
     context: Context,
@@ -245,6 +251,8 @@ internal class ScratchSoundController(
         decodeExecutor.shutdownNow()
         wakePlaybackThread()
         playbackThread.join(500)
+        // 播放线程可能是在写入过程里退出的，兜底把临时接管的 UAC 流交还
+        UsbExclusiveSinkRef.current?.endScratchOutputStream()
     }
 
     private fun wakePlaybackThread() {
@@ -256,9 +264,24 @@ internal class ScratchSoundController(
     private fun playbackLoop() {
         try {
             while (!released) {
+                // 1.3.2：手指按住不动时不会再有 onScratchMotion 回调，若不主动归零，
+                // requestedPlaybackRatePermille / direction 会一直保留最后一次摩擦值，
+                // cursor 越界后反复从同一相位重播同一小段，产生周期性刺耳「恶声」。
+                // lastMotionRealtimeMs 此前只写不读，静止保护形同虚设。
+                if (scratchActive) {
+                    val last = lastMotionRealtimeMs
+                    if (last == 0L ||
+                        SystemClock.elapsedRealtime() - last > ScratchMotionIdleTimeoutMs
+                    ) {
+                        requestedDirection = 0
+                        requestedPlaybackRatePermille = 0f
+                    }
+                }
                 val buffer = scratchBuffer
                 val sourceKey = currentSourceKey
                 val shouldPlay = scratchActive &&
+                    requestedDirection != 0 &&
+                    requestedPlaybackRatePermille > 0f &&
                     buffer != null &&
                     sourceKey != null &&
                     buffer.covers(sourceKey, scratchPositionMs) &&
@@ -307,21 +330,49 @@ internal class ScratchSoundController(
                     continue
                 }
 
-                val track = ensureAudioTrack(buffer.sampleRate)
-                if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                    track.play()
-                }
-                fillStereoBuffer(buffer, frameStep)
-                track.write(
-                    stereoWriteBuffer,
-                    0,
-                    stereoWriteBuffer.size,
-                    AudioTrack.WRITE_BLOCKING,
-                )
+                emitScratchFrames(buffer, frameStep)
             }
         } finally {
             releaseAudioTrack()
         }
+    }
+
+    /**
+     * 输出一段刮擦音。
+     *
+     * USB 独占开启时打碟声必须走 USB：[ensureAudioTrack] 建的旁路 AudioTrack 是系统
+     * AudioTrack，而独占会话已经把这块 USB 声卡从 AudioFlinger 里摘掉，它的默认路由
+     * 找不到该设备——继续走 AudioTrack 就退化成"从手机扬声器出声"（1.2.13 修复）。
+     * 所以这里优先交给 [UsbExclusiveSinkRef] 的同一条 UAC 会话；
+     * 只有在没有活跃会话（或采样率不匹配）时才回退到 AudioTrack。
+     */
+    private fun emitScratchFrames(
+        buffer: ScratchBuffer,
+        frameStep: Double,
+    ) {
+        fillStereoBuffer(buffer, frameStep)
+        val owner = UsbExclusiveSinkRef.current
+        if (owner != null &&
+            owner.writeScratchFrames(
+                buffer.sampleRate,
+                stereoWriteBuffer,
+                ScratchOutputFrames,
+            )
+        ) {
+            // 已走 UAC：系统侧音轨不再需要，避免留一条占着资源的静音 AudioTrack
+            releaseAudioTrack()
+            return
+        }
+        val track = ensureAudioTrack(buffer.sampleRate)
+        if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            track.play()
+        }
+        track.write(
+            stereoWriteBuffer,
+            0,
+            stereoWriteBuffer.size,
+            AudioTrack.WRITE_BLOCKING,
+        )
     }
 
     private fun fillStereoBuffer(
@@ -382,12 +433,18 @@ internal class ScratchSoundController(
             .setBufferSizeInBytes(safeBufferSize)
             .build()
             .also {
+                // 注意：这里**不要**把音轨钉到内置扬声器（旧行为）。
+                // USB 独占时的刮擦音由 [emitScratchFrames] 直接写进同一条 UAC 会话；
+                // 只有在没有活跃 UAC 会话（或采样率不匹配）的兜底场景才会走到这里，
+                // 此时保持系统默认路由即可（独占已释放 / 本来就是普通输出）。
                 audioTrack = it
                 audioTrackSampleRate = sampleRate
             }
     }
 
     private fun pauseAndFlushTrack() {
+        // 走 UAC 时系统侧音轨并不存在，这里同时把 UAC 流的临时接管交还
+        UsbExclusiveSinkRef.current?.endScratchOutputStream()
         val track = audioTrack ?: return
         runCatching {
             if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
@@ -442,6 +499,60 @@ private fun interpolateStereoSample(
     val left = samples[(leftFrameIndex * ScratchOutputChannels) + sampleChannel].toDouble()
     val right = samples[(rightFrameIndex * ScratchOutputChannels) + sampleChannel].toDouble()
     return (left + ((right - left) * fraction)).roundToInt()
+}
+
+/**
+ * AudioTrack 只接受 [4000, 192000] 范围内的采样率。部分机型会把 DSD 源解出成
+ * 352800 Hz 的 PCM，直接喂给 [android.media.AudioTrack.Builder.setSampleRate]
+ * 会抛 `IllegalArgumentException: Invalid sample rate` 导致打碟线程崩溃闪退。
+ * 这里把超范围的采样率收敛到不高于它的最高标准采样率，再由 [resampleStereoShorts]
+ * 把解码出的 PCM 重采样到该速率，保证音高与时长正确、且 [android.media.AudioTrack]
+ * 一定能建出来。
+ */
+private val ScratchSafeSampleRatesDesc = intArrayOf(
+    192000, 176400, 96000, 88200, 48000, 44100, 32000, 24000, 16000, 12000, 8000,
+)
+
+private fun sanitizeScratchSampleRate(rate: Int): Int {
+    if (rate in 4000..192000) return rate
+    for (supported in ScratchSafeSampleRatesDesc) {
+        if (supported <= rate) return supported
+    }
+    return 48000
+}
+
+/**
+ * 线性插值重采样器。把超范围解码采样率（如 DSD 解出的 352800 Hz）降到
+ * [android.media.AudioTrack] 能播放的速率。输出帧数按速率比缩放，
+ * 因此播放窗口的时长/音高保持不变。
+ */
+private fun resampleStereoShorts(
+    samples: ShortArray,
+    srcRate: Int,
+    dstRate: Int,
+): ShortArray {
+    if (dstRate <= 0 || srcRate <= 0 || srcRate == dstRate) return samples
+    val frameCount = samples.size / ScratchOutputChannels
+    if (frameCount <= 0) return samples
+    val dstFrameCount = (frameCount.toDouble() * dstRate / srcRate).roundToInt()
+    if (dstFrameCount <= 0) return samples
+    val out = ShortArray(dstFrameCount * ScratchOutputChannels)
+    val ratio = srcRate.toDouble() / dstRate.toDouble()
+    repeat(dstFrameCount) { i ->
+        val srcPos = i * ratio
+        val i0 = srcPos.toInt().coerceIn(0, frameCount - 1)
+        val i1 = (i0 + 1).coerceIn(0, frameCount - 1)
+        val frac = (srcPos - i0).coerceIn(0.0, 1.0)
+        repeat(ScratchOutputChannels) { c ->
+            val s0 = samples[i0 * ScratchOutputChannels + c].toDouble()
+            val s1 = samples[i1 * ScratchOutputChannels + c].toDouble()
+            out[i * ScratchOutputChannels + c] = (s0 + (s1 - s0) * frac)
+                .roundToInt()
+                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                .toShort()
+        }
+    }
+    return out
 }
 
 private data class ScratchBuffer(
@@ -552,6 +663,69 @@ private fun decodeScratchBuffer(
     context: Context,
     request: ScratchDecodeRequest,
 ): ScratchBuffer? {
+    // 1.2.23：MediaCodec 不支持的格式（DSD/DSF/DFF、APE、DTS、TTA、WavPack、TAK、WMA…）
+    // 先走 ffmpeg 兜底，让打碟也能出声；MediaCodec 路径极少数误判能解时再补一次兜底。
+    val needsFfmpeg = runCatching {
+        ApeTranscoder.needsTranscode(context, request.sourceUri)
+    }.getOrDefault(false)
+    if (needsFfmpeg) {
+        decodeScratchBufferFfmpeg(context, request)?.let { return it }
+    }
+    return decodeScratchBufferMediaCodec(context, request)
+        ?: if (!needsFfmpeg) decodeScratchBufferFfmpeg(context, request) else null
+}
+
+/**
+ * ffmpeg 兜底的打碟解码（1.2.23）：把时间区间交给内置 ffmpeg 解成裸 PCM 再读进采样缓冲。
+ * 用于 MediaCodec 不支持的格式，复用 [ApeTranscoder.decodeToRawPcm]（同源 ffmpeg 二进制与输入落地逻辑）。
+ */
+private fun decodeScratchBufferFfmpeg(
+    context: Context,
+    request: ScratchDecodeRequest,
+): ScratchBuffer? {
+    return runCatching {
+        val rate = 44_100
+        val outFile = File(context.cacheDir, "scratch_pcm_" + abs(System.nanoTime()).toString(16) + ".raw")
+        val ok = ApeTranscoder.decodeToRawPcm(
+            context,
+            request.sourceUri,
+            request.windowStartMs,
+            request.windowEndMs,
+            rate,
+            outFile,
+        )
+        if (!ok) {
+            runCatching { outFile.delete() }
+            return@runCatching null
+        }
+        val bytes = outFile.readBytes()
+        runCatching { outFile.delete() }
+        if (bytes.size < 4) return@runCatching null
+        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.nativeOrder())
+        val frameCapacity = (bytes.size / 4).coerceAtLeast(2_048)
+        val sampleBuilder = StereoSampleBuilder(frameCapacity)
+        sampleBuilder.append(buffer, /* channelCount = */ 2, AudioFormat.ENCODING_PCM_16BIT)
+        val rawSamples = sampleBuilder.build()
+        if (rawSamples.isEmpty()) return@runCatching null
+        val safeSampleRate = sanitizeScratchSampleRate(rate)
+        val stereoSamples = resampleStereoShorts(rawSamples, rate, safeSampleRate)
+        ScratchBuffer(
+            sourceKey = request.sourceKey,
+            sampleRate = safeSampleRate,
+            windowStartMs = request.windowStartMs,
+            stereoSamples = stereoSamples,
+        )
+    }.getOrNull()
+}
+
+/**
+ * MediaCodec + MediaExtractor 解码路径（[android.media.MediaCodec] 原生支持的常见格式）。
+ * 失败返回 null，由 [decodeScratchBuffer] 决定是否走 ffmpeg 兜底。
+ */
+private fun decodeScratchBufferMediaCodec(
+    context: Context,
+    request: ScratchDecodeRequest,
+): ScratchBuffer? {
     val extractor = MediaExtractor()
     var codec: MediaCodec? = null
     return try {
@@ -571,7 +745,10 @@ private fun decodeScratchBuffer(
             codec = decoder
 
             val initialSampleRate = sourceFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-            val initialCapacity = buildInitialSampleCapacity(request, initialSampleRate)
+            val initialCapacity = buildInitialSampleCapacity(
+                request,
+                sanitizeScratchSampleRate(initialSampleRate),
+            )
             val sampleBuilder = StereoSampleBuilder(initialCapacity)
             val bufferInfo = MediaCodec.BufferInfo()
             var outputSampleRate = initialSampleRate
@@ -651,13 +828,15 @@ private fun decodeScratchBuffer(
                 }
             }
 
-            val stereoSamples = sampleBuilder.build()
-            if (stereoSamples.isEmpty()) {
+            val rawSamples = sampleBuilder.build()
+            if (rawSamples.isEmpty()) {
                 null
             } else {
+                val safeSampleRate = sanitizeScratchSampleRate(outputSampleRate)
+                val stereoSamples = resampleStereoShorts(rawSamples, outputSampleRate, safeSampleRate)
                 ScratchBuffer(
                     sourceKey = request.sourceKey,
-                    sampleRate = outputSampleRate,
+                    sampleRate = safeSampleRate,
                     windowStartMs = (firstOutputTimeUs ?: request.windowStartUs) / 1_000L,
                     stereoSamples = stereoSamples,
                 )

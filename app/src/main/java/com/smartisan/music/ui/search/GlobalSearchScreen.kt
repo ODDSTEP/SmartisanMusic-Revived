@@ -1,5 +1,6 @@
 package com.smartisan.music.ui.search
 
+import com.smartisan.music.ui.theme.themedAccent
 import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -69,15 +70,19 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.smartisan.music.R
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.components.smartisanPressedTextColor
 import com.smartisan.music.ui.components.collectSmartisanPressedAsState
 import com.smartisan.music.data.library.LibraryExclusionsStore
+import com.smartisan.music.data.playback.PlaybackStatsRepository
 import com.smartisan.music.data.search.SearchHistoryStore
 import com.smartisan.music.data.settings.ArtistSettings
 import com.smartisan.music.playback.LocalPlaybackBrowser
 import com.smartisan.music.playback.artworkRequestKey
 import com.smartisan.music.playback.await
 import com.smartisan.music.playback.replaceQueueAndPlay
+import com.smartisan.music.ui.songs.SongSortPreference
+import com.smartisan.music.ui.songs.sortedForSongSort
 import com.smartisan.music.ui.album.AlbumSummary
 import com.smartisan.music.ui.artist.ArtistSummary
 import com.smartisan.music.ui.components.GlobalPlaybackBar
@@ -98,9 +103,9 @@ private val SearchDividerColor: Color
 private val SearchSongTitleColor: Color
     @Composable get() = colorResource(R.color.text_primary)
 private val SearchSongPlayingColor: Color
-    @Composable get() = colorResource(R.color.playing_red)
+    @Composable get() = themedAccent(colorResource(R.color.playing_red))
 private val SearchResultHighlightColor: Color
-    @Composable get() = colorResource(R.color.highlight_red)
+    @Composable get() = themedAccent(colorResource(R.color.highlight_red))
 private val SearchSubtitleColor: Color
     @Composable get() = colorResource(R.color.text_tertiary)
 private val SearchEmptyTextColor: Color
@@ -157,16 +162,17 @@ private val SearchResultRowHeight = 60.dp
 private val SearchResultArtworkFrameWidth = 48.dp
 private val SearchResultArtworkSize = 38.dp
 private val SearchResultActionWidth = 34.dp
-private val SearchResultMoreIconSize = 30.dp
+private val SearchResultLocateIconSize = 30.dp
 private val SearchResultSourceIconSize = 14.dp
-private val SearchPlaybackBarReservedHeight = 67.dp
+private val SearchPlaybackBarReservedHeight = 61.dp
 private val SearchTopHorizontalPadding = 6.dp
 private val SearchNoResultTopPadding = 85.dp
 private val SearchNoResultArtworkSize = 140.dp
 private val SearchArtworkDecodeSize = Size(128, 128)
 
 private enum class SearchEntityAction {
-    More,
+    /** 歌曲行右侧动作：自绘瞄准图标，点击定位到歌曲页该歌曲位置（1.2.16 定案，替代原"更多"菜单）。 */
+    Locate,
     Source,
 }
 
@@ -175,9 +181,12 @@ fun GlobalSearchScreen(
     query: String,
     modifier: Modifier = Modifier,
     libraryRefreshVersion: Int = 0,
+    /** 1.2.26：用户手动隐藏的歌曲。旧版搜索页没接这个参数，隐藏过的歌仍能被搜到、能播、还会混进队列。 */
+    hiddenMediaIds: Set<String> = emptySet(),
     onQueryChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onOpenPlayback: () -> Unit,
+    onTrackLocateClick: (MediaItem) -> Unit = {},
     onAlbumClick: (String, String) -> Unit,
     onArtistClick: (String, String) -> Unit,
     artistSettings: ArtistSettings = ArtistSettings(),
@@ -202,6 +211,18 @@ fun GlobalSearchScreen(
     val hasPermission = hasAudioPermission(context)
     var permissionVersion by remember { mutableIntStateOf(0) }
     var songs by remember(playbackBrowser) { mutableStateOf(emptyList<MediaItem>()) }
+    // 1.2.25：搜索点歌要以「歌曲页当前顺序」的全库列表为队列——旧版直接用媒体库索引顺序，
+    // 和歌曲页排序不一致，用户看到的就是「从搜索播完，播放列表内容/顺序变了」。
+    val librarySortSelection = remember { SongSortPreference.load(context) }
+    val playCountRepository =
+        remember { PlaybackStatsRepository.getInstance(context.applicationContext) }
+    val livePlayCounts by playCountRepository.statsFlow.collectAsState(initial = emptyMap())
+    val orderedSongs =
+        remember(songs, librarySortSelection, livePlayCounts) {
+            songs.sortedForSongSort(librarySortSelection) { item ->
+                livePlayCounts[item.mediaId] ?: 0L
+            }
+        }
     var currentMediaId by
         remember(playbackBrowser) {
             mutableStateOf(playbackBrowser?.currentMediaItem?.mediaId)
@@ -255,6 +276,7 @@ fun GlobalSearchScreen(
         libraryRevision,
         libraryRefreshVersion,
         hasPermission,
+        hiddenMediaIds,
     ) {
         val browser =
             playbackBrowser
@@ -275,7 +297,9 @@ fun GlobalSearchScreen(
                 }
         val childrenResult =
             browser.getChildren(rootItem.mediaId, 0, Int.MAX_VALUE, null).await(context)
+        // 与歌曲页/专辑页保持同一口径：手动隐藏的歌曲不参与搜索、不进队列
         songs = childrenResult.value?.toList().orEmpty()
+            .filterNot { item -> item.mediaId in hiddenMediaIds }
     }
 
     LaunchedEffect(Unit) {
@@ -308,11 +332,7 @@ fun GlobalSearchScreen(
 
     BackHandler(onBack = dismissSearch)
 
-    Box(modifier = modifier.fillMaxSize().background(SearchPageBackground).imePadding()) {
-        SmartisanDrawableBackground(
-            drawableRes = R.drawable.account_background,
-            modifier = Modifier.matchParentSize(),
-        )
+    Box(modifier = modifier.fillMaxSize().background(SearchPageBackground).imePadding().libraryTexture()) {
         Column(modifier = Modifier.fillMaxSize()) {
             SearchTopBar(
                 query = query,
@@ -350,14 +370,39 @@ fun GlobalSearchScreen(
                     showPlaybackBar = showPlaybackBar,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     onSongClick = { item ->
-                        val targetIndex =
-                            results.songs.indexOfFirst { song -> song.mediaId == item.mediaId }
-                        if (targetIndex >= 0) {
-                            playbackBrowser.replaceQueueAndPlay(results.songs, targetIndex)
+                        // 1.2.24：搜索结果页只展示前 2 首「建议」，若把 matched 列表当队列，
+                        // 只命中 1 首时队列就只剩 1 首，点播后无法切上/下曲。
+                        // 1.2.25：改为「与歌曲页完全同序的全库列表」，定位到所点歌曲；
+                        // 该歌不在全库（极端情况）才回退到匹配列表。
+                        val libraryIndex =
+                            orderedSongs.indexOfFirst { it.mediaId == item.mediaId }
+                        val queue: List<MediaItem>
+                        val startIndex: Int
+                        if (libraryIndex >= 0) {
+                            queue = orderedSongs
+                            startIndex = libraryIndex
+                        } else {
+                            queue = results.songs
+                            startIndex = results.songs.indexOfFirst { it.mediaId == item.mediaId }
+                        }
+                        if (startIndex >= 0 && queue.isNotEmpty()) {
+                            // 点单曲保留当前「随机播放」状态（旧版这里会把随机关掉）
+                            playbackBrowser.replaceQueueAndPlay(
+                                mediaItems = queue,
+                                startIndex = startIndex,
+                                keepShuffle = true,
+                            )
                             scope.launch {
                                 historyStore.record(query)
                             }
                         }
+                        // 点歌后立刻收起输入法并清除搜索框焦点：否则焦点残留在输入框上，
+                        // 进大播放页后键盘仍挂着，甚至回前台还会自动弹出键盘并选中文字
+                        clearSearchInputFocus()
+                    },
+                    onSongLocateClick = { item ->
+                        clearSearchInputFocus()
+                        onTrackLocateClick(item)
                     },
                     onAlbumClick = { album ->
                         scope.launch {
@@ -379,7 +424,11 @@ fun GlobalSearchScreen(
         if (showPlaybackBar) {
             GlobalPlaybackBar(
                 modifier = Modifier.align(Alignment.BottomCenter),
-                onOpenPlayback = onOpenPlayback,
+                onOpenPlayback = {
+                    // 进入大播放页前收起输入法、清掉搜索框焦点，杜绝键盘残留
+                    clearSearchInputFocus()
+                    onOpenPlayback()
+                },
             )
         }
     }
@@ -547,20 +596,11 @@ private fun SearchHistoryPage(
     modifier: Modifier = Modifier,
 ) {
     if (history.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize()) {
-            SmartisanDrawableBackground(
-                drawableRes = R.drawable.account_background,
-                modifier = Modifier.matchParentSize(),
-            )
-        }
+        Box(modifier = modifier.fillMaxSize().libraryTexture())
         return
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        SmartisanDrawableBackground(
-            drawableRes = R.drawable.account_background,
-            modifier = Modifier.matchParentSize(),
-        )
+    Box(modifier = modifier.fillMaxSize().libraryTexture()) {
         Column(
             modifier =
                 Modifier.fillMaxSize()
@@ -614,15 +654,12 @@ private fun SearchResultsPage(
     currentMediaId: String?,
     showPlaybackBar: Boolean,
     onSongClick: (MediaItem) -> Unit,
+    onSongLocateClick: (MediaItem) -> Unit,
     onAlbumClick: (AlbumSummary) -> Unit,
     onArtistClick: (ArtistSummary) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        SmartisanDrawableBackground(
-            drawableRes = R.drawable.account_background,
-            modifier = Modifier.matchParentSize(),
-        )
+    Box(modifier = modifier.fillMaxSize().libraryTexture()) {
         if (!results.hasResults) {
             SearchNoResultState(modifier = Modifier.fillMaxSize())
         } else {
@@ -638,6 +675,7 @@ private fun SearchResultsPage(
                     songs = results.songs.take(2),
                     currentMediaId = currentMediaId,
                     onSongClick = onSongClick,
+                    onSongLocateClick = onSongLocateClick,
                 )
                 appendAlbumResults(
                     albums = results.albums,
@@ -656,6 +694,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.appendSuggestedResult
     songs: List<MediaItem>,
     currentMediaId: String?,
     onSongClick: (MediaItem) -> Unit,
+    onSongLocateClick: (MediaItem) -> Unit,
 ) {
     if (songs.isEmpty()) return
     item(key = "suggested-header") { SearchSectionHeader(title = R.string.suggestion) }
@@ -667,6 +706,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.appendSuggestedResult
             mediaItem = item,
             selected = item.mediaId == currentMediaId,
             onClick = { onSongClick(item) },
+            onLocateClick = { onSongLocateClick(item) },
         )
     }
 }
@@ -716,19 +756,30 @@ private fun androidx.compose.foundation.lazy.LazyListScope.appendArtistResults(
 
 @Composable
 private fun SearchSectionHeader(title: Int) {
-    Box(modifier = Modifier.fillMaxWidth().height(SearchSectionHeaderHeight)) {
-        SmartisanDrawableBackground(
-            drawableRes = R.drawable.home_recommend_title_noline_bg,
-            modifier = Modifier.matchParentSize(),
+    // [1.4.29·R121/R123] 分组头只统一颜色，不改尺寸（保持 45dp / 15sp）。
+    // 分隔栏莫奈化开启 → 铺 surfaceContainer 色块；关闭 → 原厂图，零改动。
+    val containerColor = com.smartisan.music.ui.theme.monetSurfaceContainer()
+    val letterColor =
+        com.smartisan.music.ui.theme.monetSeparatorLetterColor(
+            containerColor ?: SearchPageBackground
         )
+    Box(modifier = Modifier.fillMaxWidth().height(SearchSectionHeaderHeight)) {
+        if (containerColor != null) {
+            Box(Modifier.matchParentSize().background(containerColor))
+        } else {
+            SmartisanDrawableBackground(
+                drawableRes = R.drawable.home_recommend_title_noline_bg,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
         Text(
             text = stringResource(title),
-            style = TextStyle(fontSize = 15.sp, color = SearchSectionTitleColor),
+            style = TextStyle(fontSize = 15.sp, color = letterColor ?: SearchSectionTitleColor),
             modifier =
                 Modifier.align(Alignment.CenterStart)
                     .padding(start = SearchSectionHeaderStartPadding),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
         Box(
             modifier =
@@ -745,6 +796,7 @@ private fun SearchSongRow(
     mediaItem: MediaItem,
     selected: Boolean,
     onClick: () -> Unit,
+    onLocateClick: () -> Unit = {},
 ) {
     SearchEntityRow(
         title =
@@ -756,6 +808,7 @@ private fun SearchSongRow(
         representative = mediaItem,
         titleColor = if (selected) SearchSongPlayingColor else SearchSongTitleColor,
         onClick = onClick,
+        onActionClick = onLocateClick,
     )
 }
 
@@ -767,10 +820,14 @@ private fun SearchEntityRow(
     onClick: () -> Unit,
     titleColor: Color = SearchSongTitleColor,
     subtitleColor: Color = SearchSubtitleColor,
-    action: SearchEntityAction = SearchEntityAction.More,
+    action: SearchEntityAction = SearchEntityAction.Locate,
+    // 非空时右侧按钮自己消费点击（如歌曲行的"定位到歌曲页"），不再触发行点击（播放）
+    onActionClick: (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectSmartisanPressedAsState()
+    val actionInteractionSource = remember { MutableInteractionSource() }
+    val actionPressed by actionInteractionSource.collectSmartisanPressedAsState()
 
     Box(
         modifier =
@@ -811,40 +868,56 @@ private fun SearchEntityRow(
                     text = title,
                     style = SearchPrimaryTextStyle.copy(color = smartisanPressedTextColor(titleColor, pressed)),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                 )
                 if (!subtitle.isNullOrEmpty()) {
                     Text(
                         text = subtitle,
                         style = SearchSecondaryTextStyle.copy(color = smartisanPressedTextColor(subtitleColor, pressed)),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }
+            val iconRes =
+                when (action) {
+                    SearchEntityAction.Locate ->
+                        if (pressed || actionPressed) {
+                            R.drawable.search_row_locate_white
+                        } else {
+                            R.drawable.search_row_locate
+                        }
+                    SearchEntityAction.Source ->
+                        if (pressed || actionPressed) {
+                            R.drawable.local_phone_icon_white
+                        } else {
+                            R.drawable.local_phone_icon
+                        }
+                }
             Box(
-                modifier = Modifier.width(SearchResultActionWidth).height(SearchResultRowHeight),
+                modifier =
+                    Modifier.width(SearchResultActionWidth).height(SearchResultRowHeight).let {
+                        if (onActionClick != null) {
+                            // 独立 clickable：消费整个右侧区域的点击，避免落回整行的"点击播放"
+                            it.clickable(
+                                interactionSource = actionInteractionSource,
+                                indication = null,
+                                onClick = onActionClick,
+                            )
+                        } else {
+                            it
+                        }
+                    },
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                val iconRes =
-                    when (action) {
-                        SearchEntityAction.More ->
-                            if (pressed) R.drawable.btn_more_white else R.drawable.btn_more
-                        SearchEntityAction.Source ->
-                            if (pressed) {
-                                R.drawable.local_phone_icon_white
-                            } else {
-                                R.drawable.local_phone_icon
-                            }
-                    }
                 Image(
                     painter = painterResource(iconRes),
                     contentDescription = null,
                     modifier =
                         Modifier.size(
-                            if (action == SearchEntityAction.More) {
-                                SearchResultMoreIconSize
+                            if (action == SearchEntityAction.Locate) {
+                                SearchResultLocateIconSize
                             } else {
                                 SearchResultSourceIconSize
                             }
@@ -889,7 +962,7 @@ private fun SearchHistoryChip(
                 ),
             modifier = Modifier.padding(horizontal = 14.dp),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
     }
 }
@@ -900,7 +973,7 @@ private fun SearchNoResultState(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .fillMaxSize()
-                .background(colorResource(R.color.page_background))
+                .libraryTexture()
                 .padding(top = SearchNoResultTopPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -913,7 +986,7 @@ private fun SearchNoResultState(modifier: Modifier = Modifier) {
             text = stringResource(R.string.search_no_result),
             style = TextStyle(fontSize = 23.sp, color = SearchEmptyTextColor),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
             modifier = Modifier.padding(top = 25.dp),
         )
     }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- [v13·通知栏喜欢状态可辨识] 未收藏 = 空心描边爱心；收藏态 ic_notif_favorite_filled
+         为实心红心。系统会把通知 action 图标统一染色，颜色差异会丢失，故改为用
+         「空心 vs 实心」的形状差异区分，确保用户一眼能看出收藏状态。
+         保持 24dp 等尺寸矢量——1.4.10 G-56 实测直接复用 9-patch 会缩成 27×19，故不自套。 -->
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineJoin="round"
+        android:pathData="M12,21.06l-1.32,-1.19C5.4,15.36 2,12.28 2,8.5A5.5,5.5 0 0,1 7.5,3c1.74,0 3.41,0.81 4.5,2.09A6,6 0 0,1 16.5,3A5.5,5.5 0 0,1 22,8.5c0,3.78 -3.4,6.86 -8.68,11.37L12,21.06z" />
+</vector>

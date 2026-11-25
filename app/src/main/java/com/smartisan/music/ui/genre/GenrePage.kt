@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.media3.common.MediaItem
 import com.smartisan.music.R
+import com.smartisan.music.ui.songs.AlphabetQuickBar
 import com.smartisan.music.data.genre.GenreTagRepository
 import com.smartisan.music.playback.LocalPlaybackBrowser
 import com.smartisan.music.ui.components.*
@@ -108,7 +109,7 @@ internal fun GenrePage(
             dimensionResource(R.dimen.title_bar_height)
     val titleShadowHeight = dimensionResource(R.dimen.title_bar_shadow_height)
 
-    Box(modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background))) {
+    Box(modifier = modifier.fillMaxSize().libraryTexture()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TitleBarTransition(
                 secondaryKey = selectedGenre,
@@ -207,18 +208,28 @@ private fun GenreRootPage(
     val list = rememberLazyListState()
     val entrance =
         rememberLibraryListEntrance(genres, active) { list.layoutInfo.visibleItemsInfo.size }
+    // 风格页此前用 Box + fillMaxSize() 包裹 LazyColumn，且列表项挂了 graphicsLayer（入场动画）。
+    // 这种组合会让 Compose 在首帧把 LazyColumn 的滚动位置误算到最底部（其它页面如歌曲页、
+    // 喜爱的歌、播放列表均用 Column + weight(1f) 包裹，没有此问题）。改用同样稳定的结构，
+    // 并在内容就绪后强制滚回顶部，确保无论从“更多”还是底部导航栏打开都是顶视图。
+    LaunchedEffect(active, genres) {
+        if (active && genres.isNotEmpty()) list.scrollToItem(0)
+    }
     Box(modifier.fillMaxSize().libraryTexture()) {
-        if (!active) return@Box
+        Column(Modifier.fillMaxSize()) {
+        if (!active) return@Column
         if (libraryLoaded && genres.isEmpty()) {
             com.smartisan.music.ui.components.SmartisanEmptyHint(
                 R.drawable.blank_style,
                 stringResource(R.string.no_style),
                 subtitle = stringResource(R.string.show_style),
+                modifier = Modifier.weight(1f),
             )
         } else {
             LazyColumn(
                 state = list,
-                modifier = Modifier.fillMaxSize().smartisanVerticalScrollbar(list),
+                modifier =
+                    Modifier.fillMaxWidth().weight(1f).smartisanVerticalScrollbar(list),
             ) {
                 itemsIndexed(genres, key = { _, genre -> genre.id }) { index, genre ->
                     LibrarySummaryRow(
@@ -252,5 +263,11 @@ private fun GenreRootPage(
                 item(key = "genre-footer") { LibraryFooter(R.plurals.genre_count, genres.size) }
             }
         }
+            }
+        // [1.4.28] 删掉右侧 A–Z 字母条。
+        // 旧实现用 AlphabetQuickBar(labels=...) 把中文风格名的首字符映射到 A–Z，
+        // 但中文首字符永远不属于 A–Z，全部落进 "#"；列表本身也没有按首字母分组，
+        // 点任何字母都不跳。它是纯装饰，删除比留着骗人好。
     }
+
 }

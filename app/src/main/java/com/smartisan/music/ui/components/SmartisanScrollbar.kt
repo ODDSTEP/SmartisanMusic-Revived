@@ -15,6 +15,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.ColorPainter
@@ -23,6 +24,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
 import com.smartisan.music.R
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -110,7 +114,64 @@ internal fun Modifier.smartisanVerticalScrollbar(state: ScrollableState): Modifi
                 }
             }
     }
-    return drawWithContent {
+    return pointerInput(state, style, right) {
+        // 1.2.23：滚动条可拖动——按住右侧滑块（或轨道）即可快速拖动长列表。
+        // 仅在命中区（右侧细条）内消费事件，其余区域照常交给列表自身滚动/点击。
+        // 拖拽产生的滚动增量用 dispatchRawDelta（非挂起）直接落到 ScrollableState，
+        // 避免在受限的指针作用域里启动协程或调用挂起滚动 API。
+        val hitWidth = (style.thickness + 24).coerceAtLeast(44)
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                val down = event.changes.firstOrNull { it.changedToDownIgnoreConsumed() } ?: continue
+                val x = down.position.x
+                val inHit = if (right) x >= size.width - hitWidth else x <= hitWidth
+                if (!inHit) continue
+                val indicator = state.scrollIndicatorState ?: continue
+                val contentSize = indicator.contentSize
+                val viewportSize = indicator.viewportSize
+                val scrollOffset = indicator.scrollOffset
+                if (contentSize == Int.MAX_VALUE || viewportSize == Int.MAX_VALUE ||
+                    scrollOffset == Int.MAX_VALUE || contentSize <= viewportSize
+                ) {
+                    continue
+                }
+                val geom = smartisanScrollbarGeometry(
+                    size.height, style.thickness, scrollOffset, contentSize, viewportSize,
+                ) ?: continue
+                val v = size.height
+                val range = (contentSize - viewportSize).toFloat()
+                val trackLen = (v - geom.length).coerceAtLeast(1)
+                val ratio = range / trackLen
+                down.consume()
+                var lastY = down.position.y
+                // 命中滑块本身 → 相对拖动；命中轨道（滑块之外）→ 先把滑块跳到手指处再拖
+                val onThumb = down.position.y in (geom.offset - 8f)..(geom.offset + geom.length + 8f)
+                if (!onThumb) {
+                    val targetFraction = ((down.position.y - geom.length / 2f) / trackLen).coerceIn(0f, 1f)
+                    val target = targetFraction * range
+                    state.dispatchRawDelta(target - scrollOffset)
+                }
+                var dragging = true
+                while (dragging) {
+                    val e = awaitPointerEvent()
+                    val change = e.changes.firstOrNull { it.id == down.id } ?: break
+                    if (change.changedToUpIgnoreConsumed()) {
+                        change.consume()
+                        break
+                    }
+                    if (change.pressed) {
+                        val dy = change.position.y - lastY
+                        lastY = change.position.y
+                        if (dy != 0f) {
+                            state.dispatchRawDelta(dy * ratio)
+                        }
+                        change.consume()
+                    }
+                }
+            }
+        }
+    }.drawWithContent {
         drawContent()
         val opacity = alpha.value
         if (opacity <= 0f) return@drawWithContent

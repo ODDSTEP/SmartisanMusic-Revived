@@ -71,6 +71,10 @@ internal const val PlaybackTurntableAxisDiameterRatio = 62f / 1080f
 internal const val PlaybackTurntableAxisSourceDiameterPx = 60
 
 internal val PlaybackVisualStageTopPadding = 16.dp
+// [护栏 G-40·1.4.8 落地] 唱盘视觉组整体下移量：把唱盘中心锚到约 44% 屏高（最早版本位置），
+// 用户 23 号页第 1 问拍板。28dp 为静态估算（图1 40.4% → 图2 43.8%，跨约 27dp@800dp 内容高）；
+// 观感待实机，可在此单一常量微调。
+internal val PlaybackVisualStageAnchorOffsetY = 28.dp
 // Music 8.1.0: audio_player.xml and the source xxhdpi playback assets.
 internal val PlaybackSeekBarHeight = 41.dp
 internal val PlaybackSeekBarHorizontalPadding = 51.299988.dp
@@ -79,7 +83,18 @@ internal val PlaybackSeekThumbWidth = (67f / 3f).dp
 internal val PlaybackSeekThumbHeight = 41.dp
 internal val PlaybackSeekBarDividerHeight = 0.7.dp
 internal val PlaybackVolumeBarHeight = 60.dp
-internal val PlaybackVolumeHorizontalPadding = 26.5.dp
+// 1.4.5 清单 6：音量条两侧 ± 逐格微调按钮尺寸（不占音量条 drawable / 配色）
+internal val PlaybackVolumeStepButtonSize = 40.dp
+// [护栏 G-32·1.4.7 落地] 四段等距（20 号页定稿：按 −/+ 符号笔画边界量距、m=0、四段 g 相等）。
+// 几何：符号中心 = b/2 = 20dp，轨道左端 = padding；g1 = 20 − w/2，g2 = padding − 20 − w/2。
+// 令 g1 = g2 ⇒ padding = 2·(m + b/2) = 40dp；符号笔画宽 w 在等式两边抵消 →
+// 与量距口径无关、与动态 width 无关。音量条长 L = W − 2·padding = W − 80（W=360dp 时 L=280dp）；
+// g3/g4 由左右镜像自动相等。Box/Canvas/滑块/±键/拖动/动画一律一字不动。
+// thumbOffset=5dp 保持：可见滑块边缘仍与外框端重合（20 号页第 4 问；静态几何推演，观感待实机）。
+// [护栏 G-39·1.4.8 落地] 音量条口径改为对齐进度条端点（23 号页第 3 问拍板）：
+// padding 取与进度条相同的 51.299988dp，音量条轨道两端与进度条两端在同一垂直线上；
+// G-32 的四段等距沿革保留在其注释中作为历史事实，不作删除。观感待实机。
+internal val PlaybackVolumeHorizontalPadding = 51.299988.dp
 internal val PlaybackVolumeThumbOffset = 5.dp
 internal val PlaybackActionButtonSize = 31.dp
 internal val PlaybackMinimumTouchTargetSize = 48.dp

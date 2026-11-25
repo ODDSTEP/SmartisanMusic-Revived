@@ -22,6 +22,7 @@ import com.smartisan.music.ui.navigation.LocalSmartisanTitleMotion
 import com.smartisan.music.ui.navigation.ProjectableNavigationTitle
 import com.smartisan.music.ui.navigation.SmartisanNavigationMotion
 import com.smartisan.music.ui.navigation.SmartisanTitleMotion
+import com.smartisan.music.ui.theme.monetTitleBarSurface
 import kotlinx.coroutines.flow.first
 
 /** Keep the title background stationary; only the individual title and action slots animate. */
@@ -59,7 +60,8 @@ internal fun <T : Any> TitleBarTransition(
                 .clipToBounds()
                 .then(
                     if (parentMotion == null)
-                        Modifier.background(colorResource(R.color.title_bar_background))
+                        // [v12] 顶栏向底栏看齐：莫奈开=底栏同款色，莫奈关=官方原色零改动。
+                        Modifier.background(monetTitleBarSurface())
                     else Modifier
                 )
         ) {

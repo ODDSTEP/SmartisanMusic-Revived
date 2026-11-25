@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  [1.4.25·R69] 通知栏"列表循环-关闭"专用图标。
+  原来 REPEAT_MODE_ALL 与 REPEAT_MODE_OFF 共用 ic_notif_repeat（同一张图），
+  通知栏切循环时图标纹丝不动，用户根本看不出当前是不是循环。
+  这里保持同一造型但整体降到 40% 不透明度（与原厂 cycle_off 的透明语义一致），
+  与 ic_notif_repeat（循环开，100%）形成可见差别。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.4"
+        android:pathData="M7,7h10v2.5L21,6l-4,-3.5V5H5v6h2V7zM17,17H7v-2.5L3,18l4,3.5V19h12v-6h-2v4z" />
+</vector>

@@ -43,7 +43,11 @@ import com.smartisan.music.R
 import com.smartisan.music.ui.artwork.AlbumArtworkLoader
 import com.smartisan.music.ui.components.*
 import com.smartisan.music.ui.library.SmartisanMediaArtwork
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.library.rememberAlbumArtworkLoader
+import com.smartisan.music.ui.theme.monetSeparatorLetterColor
+import com.smartisan.music.ui.theme.monetSurfaceContainer
+import com.smartisan.music.ui.theme.themedListRowBackground
 import kotlin.math.roundToInt
 
 internal data class PlaybackQueueSnapshot(
@@ -138,8 +142,9 @@ internal fun PlaybackQueueLayer(
             }
         }
     val handle = rememberSmartisanDrawablePainter(R.drawable.btn_drag_selector)
-    val topShadow = rememberSmartisanDrawablePainter(R.drawable.shadow_top)
-    val bottomShadow = rememberSmartisanDrawablePainter(R.drawable.shadow_bottom)
+    // [1.4.25·R49-③] 语义化命名：这是「滚动渐隐」不是投影，见 ScrollFadeEdge。
+    val topShadow = ScrollFadeEdge.topPainter()
+    val bottomShadow = ScrollFadeEdge.bottomPainter()
     val shadowTop = topShadow.intrinsicSize.height.roundToInt()
     val shadowBottom = bottomShadow.intrinsicSize.height.roundToInt()
     val handleRightMargin = with(density) { 2.dp.roundToPx() }
@@ -152,9 +157,9 @@ internal fun PlaybackQueueLayer(
         Box(modifier.padding(top = dimensionResource(R.dimen.titlebar_height))) {
             Box(
                 Modifier.fillMaxSize()
-                    .smartisanPainterBackground(
-                        rememberSmartisanDrawablePainter(R.drawable.account_background)
-                    )
+                    // [1.4.29·R123] 队列不再铺不透明原厂图盖住外层莫奈底：
+                    // 与库页同一套「竖纹 + 莫奈色雾」，拉出队列时与大播放页同源不跳色。
+                    .libraryTexture()
                     .pointerInput(
                         rows,
                         snapshot.reorderEnabled,
@@ -336,11 +341,24 @@ internal fun PlaybackQueueLayer(
 
 @Composable
 private fun QueueHeader(row: PlaybackQueueRow.Header, onClear: () -> Unit, modifier: Modifier) {
+    // [1.4.29·R121/R123] 分组头只统一颜色，尺寸保持原值：
+    // 分隔栏莫奈化开启 → surfaceContainer 色块；关闭 → 原厂 list_title_bg，零改动。
+    val containerColor = monetSurfaceContainer()
+    val letterColor =
+        monetSeparatorLetterColor(containerColor ?: colorResource(R.color.page_background))
     Box(
         modifier
             .fillMaxWidth()
             .height(dimensionResource(R.dimen.now_playing_header_height))
-            .smartisanPainterBackground(rememberSmartisanDrawablePainter(R.drawable.list_title_bg))
+            .then(
+                if (containerColor != null) {
+                    Modifier.background(containerColor)
+                } else {
+                    Modifier.smartisanPainterBackground(
+                        rememberSmartisanDrawablePainter(R.drawable.list_title_bg)
+                    )
+                }
+            )
     ) {
         BasicText(
             row.title,
@@ -348,7 +366,7 @@ private fun QueueHeader(row: PlaybackQueueRow.Header, onClear: () -> Unit, modif
                 .padding(start = dimensionResource(R.dimen.tabbar_padding_left)),
             style =
                 TextStyle(
-                    color = colorResource(R.color.title_text_color),
+                    color = letterColor ?: colorResource(R.color.title_text_color),
                     fontSize = smartisanTextSize(R.dimen.radio_category_header_text_size),
                     platformStyle = PlatformTextStyle(includeFontPadding = true),
                 ),
@@ -378,12 +396,9 @@ private fun QueueNormalTrack(
         modifier
             .fillMaxWidth()
             .height(dimensionResource(R.dimen.listview_item_height))
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(
-                    R.drawable.playing_queue_item_selector,
-                    pressed = pressed,
-                )
-            )
+            // [1.4.29·R123] 行从死白 playing_queue_color 换成与歌曲页同一套白卡+渐变，
+            // 否则「莫奈底 + 死白行」两页不一致。
+            .themedListRowBackground(pressed = pressed)
             .clickable(interaction, null, onClick = smartisanClick(onClick)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -543,7 +558,7 @@ private fun QueueTrackText(
                 platformStyle = PlatformTextStyle(includeFontPadding = true),
             ),
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        overflow = TextOverflow.Clip,
     )
 }
 

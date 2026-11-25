@@ -78,17 +78,17 @@
     <dimen name="quickbar_ex_grid_column_width">60.0dp</dimen>
     <dimen name="smartisan_quickbar_min_distance">4.0dp</dimen>
     <dimen name="smartisan_quickbarex_gridview_font_size">16.0sp</dimen>
-    <dimen name="realtabcontent_margin_bottom">54.0dp</dimen>
+    <dimen name="realtabcontent_margin_bottom">61.0dp</dimen>
     <dimen name="right_container_margin">6.0dp</dimen>
     <dimen name="saved_songs_items_margin_left">15.5dp</dimen>
     <!-- Music 8.1.0 sb_editable_tab_bar.xml: overflow zone is 80dp with 11dp top padding. -->
-    <dimen name="navigation_editor_overflow_height">80.0dp</dimen>
+    <dimen name="navigation_editor_overflow_height">61.0dp</dimen>
     <dimen name="smartisan_switch_bar_top_rg_padding">11.0dp</dimen>
-    <dimen name="secondary_bar_height">48.0dp</dimen>
+    <dimen name="secondary_bar_height">50.0dp</dimen>
     <dimen name="settings_item_tips_text_size">13.5sp</dimen>
     <dimen name="semi_large_text_size">18.0sp</dimen>
     <dimen name="semi_small_text_size">13.5sp</dimen>
-    <dimen name="smartisan_bottom_bar_height">54.0dp</dimen>
+    <dimen name="smartisan_bottom_bar_height">61.0dp</dimen>
     <dimen name="smartisan_switch_bar_drawablePadding">3.0dp</dimen>
     <dimen name="smartisan_tabswitch_tabbar_height">@dimen/smartisan_bottom_bar_height</dimen>
     <dimen name="standard_icon_size">36.0dp</dimen>

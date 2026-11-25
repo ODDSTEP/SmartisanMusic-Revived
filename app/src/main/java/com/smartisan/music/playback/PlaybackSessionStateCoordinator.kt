@@ -2,7 +2,7 @@ package com.smartisan.music.playback
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import com.smartisan.music.diagnostics.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,11 +12,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal class PlaybackSessionStateCoordinator(
-    private val player: ExoPlayer,
+    private val player: Player,
     private val stateStore: PlaybackSessionStateStore,
     private val scope: CoroutineScope,
     private val canLoadLibraryItems: () -> Boolean,
     private val loadLibraryItemsByQueueKeys: suspend (List<PlaybackQueueSnapshotItem>) -> List<MediaItem>,
+    /** [1.4.24] 返回并消费"上次是否崩溃"标记；命中则跳过恢复并清空快照。 */
+    private val consumeCrashRecovery: () -> Boolean = { false },
 ) {
 
     private var persistJob: Job? = null
@@ -91,6 +93,14 @@ internal class PlaybackSessionStateCoordinator(
         scope.launch {
             var shouldPersistAfterRestore = true
             try {
+                // [1.4.24·崩溃后不重放崩溃曲] 若上次是崩溃退出，跳过恢复并清空快照。
+                // 用户痛点是崩溃曲在暂停态被 prepare 再次解码导致死循环闪退。
+                if (consumeCrashRecovery()) {
+                    AppLog.w("Boot", "检测到上次崩溃：跳过'上次播放快照'恢复并清空，避免再次加载崩溃曲")
+                    withContext(Dispatchers.IO) { stateStore.clear() }
+                    shouldPersistAfterRestore = false
+                    return@launch
+                }
                 val snapshot = withContext(Dispatchers.IO) {
                     stateStore.load()
                 }
@@ -290,6 +300,12 @@ private fun Player.restoreQueuePaused(
     startIndex: Int,
     startPositionMs: Long,
 ) {
+    AppLog.i(
+        "Queue",
+        "恢复队列快照(setMediaItems): count=${mediaItems.size} startIndex=$startIndex" +
+            " startId=${mediaItems.getOrNull(startIndex)?.mediaId}" +
+            " firstId=${mediaItems.firstOrNull()?.mediaId} positionMs=$startPositionMs",
+    )
     pause()
     setMediaItems(mediaItems, startIndex, startPositionMs)
     prepare()

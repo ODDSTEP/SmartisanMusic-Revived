@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartisan.music.R
+import com.smartisan.music.ui.theme.themedInkRes
 
 internal data class TrackActionItem(
     @param:StringRes val labelRes: Int,
@@ -41,6 +42,11 @@ internal fun TrackActionsOverlay(
     var retained by remember { mutableStateOf(actions) }
     LaunchedEffect(visible, actions) { if (visible) retained = actions }
     val displayed = if (visible) actions else retained
+    // 1.2.19：系统返回键/手势返回必须优先关闭这层菜单，
+    // 否则（此前）返回会直接穿透到页面栈：专辑页→搜索页→主页，菜单却一直挂着。
+    androidx.activity.compose.BackHandler(enabled = visible) {
+        onDismissRequest()
+    }
     SmartisanAnimatedSheet(
         visible,
         onDismissRequest,
@@ -101,7 +107,7 @@ private fun ActionCell(action: TrackActionItem, modifier: Modifier) {
             style =
                 TextStyle(
                     color =
-                        colorResource(
+                        themedInkRes(
                             if (action.selected) R.color.btn_text_color_blue
                             else R.color.add_nav_text_color
                         ),

@@ -45,8 +45,14 @@ import androidx.compose.ui.zIndex
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.smartisan.music.R
+import com.smartisan.music.ui.shell.ImmersiveScrollBus
+import com.smartisan.music.ui.shell.ImmersiveLocateEffect
+import com.smartisan.music.ui.shell.ImmersiveActionRowVisibility
 import com.smartisan.music.data.library.LibraryExclusions
 import com.smartisan.music.data.library.LibraryExclusionsStore
+import com.smartisan.music.data.settings.FileScanSettings
+import com.smartisan.music.data.settings.FileScanSettingsStore
+import com.smartisan.music.data.settings.isHiddenByFileScan
 import com.smartisan.music.platform.text.HanLatinTransliterator
 import com.smartisan.music.playback.LocalAudioLibrary
 import com.smartisan.music.playback.LocalPlaybackBrowser
@@ -60,6 +66,7 @@ import com.smartisan.music.ui.library.LibraryDivider
 import com.smartisan.music.ui.library.LibraryFooter
 import com.smartisan.music.ui.library.LibraryIconButton
 import com.smartisan.music.ui.library.LibraryPlayActions
+import com.smartisan.music.ui.library.LibraryTopCard
 import com.smartisan.music.ui.library.libraryDuration
 import com.smartisan.music.ui.library.libraryListEntrance
 import com.smartisan.music.ui.library.libraryTexture
@@ -75,6 +82,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.smartisan.music.ui.theme.themedListRowBackground
 
 private const val FolderStorageLabel = "Phone Storage"
 private const val FolderVisibilityAnimationMillis = 300L
@@ -94,6 +102,11 @@ internal fun FolderPage(
     onMediaIdsHidden: (Set<String>) -> Unit,
     onRequestDeleteMediaIds: (Set<String>) -> Unit,
     onTrackMoreClick: (MediaItem) -> Unit,
+    /** 外部「查看文件夹」注入的目录键（normalizedDirectoryKey）；非空时钻入该文件夹 */
+    externalTargetKey: String? = null,
+    onExternalTargetConsumed: () -> Unit = {},
+    /** 从外部跳转进来后按返回：回到来源页（而非文件夹首页） */
+    onJumpBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -109,12 +122,20 @@ internal fun FolderPage(
         }
     val directoryTitle = stringResource(R.string.tab_directory)
     val exclusions by exclusionsStore.exclusions.collectAsState(initial = LibraryExclusions())
+    val fileScanSettings by
+        remember(context.applicationContext) {
+            FileScanSettingsStore(context.applicationContext)
+        }
+            .settings
+            .collectAsState(initial = FileScanSettings())
     val hasPermission =
         remember(context) {
             hasAudioPermission(context)
         }
     var mediaItems by remember(audioLibrary) { mutableStateOf(emptyList<MediaItem>()) }
     var target by remember { mutableStateOf<FolderTarget?>(null) }
+    /** 本次 target 是否由外部「查看文件夹」跳转进来（决定返回键回来源页） */
+    var jumpedFromExternal by remember { mutableStateOf(false) }
     var editMode by remember { mutableStateOf(false) }
     var selectedDirectoryKeys by remember { mutableStateOf(emptySet<String>()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -130,17 +151,43 @@ internal fun FolderPage(
             }
     }
 
+    // 文件扫描开关命中的内容一律「当作从未扫描到」：文件夹页同样在数据源头排除，
+    // 这些文件不参与目录统计、也不出现在文件夹详情与编辑模式里
+    val visibleMediaItems =
+        remember(mediaItems, fileScanSettings) {
+            mediaItems.filterNot { it.isHiddenByFileScan(fileScanSettings) }
+        }
+
     val allDirectories =
-        remember(mediaItems, exclusions) {
+        remember(visibleMediaItems, exclusions) {
             buildDirectoryEntries(
-                mediaItems = mediaItems,
+                mediaItems = visibleMediaItems,
                 exclusions = exclusions,
                 storageLabel = FolderStorageLabel,
             )
         }
 
+    // 外部「查看文件夹」定位（1.2.16）：目录数据就绪后钻入目标文件夹
+    LaunchedEffect(externalTargetKey, allDirectories) {
+        val key = externalTargetKey ?: return@LaunchedEffect
+        val entry = allDirectories.find { it.key == key }
+        if (entry != null) {
+            target = FolderTarget(key = entry.key, title = entry.name)
+            jumpedFromExternal = true
+            onExternalTargetConsumed()
+        } else if (allDirectories.isNotEmpty()) {
+            // 目录已就绪但找不到目标（被过滤等）→ 停在文件夹根
+            onExternalTargetConsumed()
+        }
+    }
+
     BackHandler(enabled = active && target != null) {
         target = null
+        // 跳转进来的目标页：返回键回来源页（而非文件夹首页）
+        if (jumpedFromExternal) {
+            jumpedFromExternal = false
+            onJumpBack()
+        }
     }
     BackHandler(enabled = active && target == null && editMode) {
         editMode = false
@@ -152,14 +199,21 @@ internal fun FolderPage(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background))) {
+    Box(modifier = modifier.fillMaxSize().libraryTexture()) {
         val titleAreaHeight =
             WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
                 dimensionResource(R.dimen.title_bar_height)
         val titleShadowHeight = dimensionResource(R.dimen.title_bar_shadow_height)
         val handleBack: () -> Unit = {
             when {
-                target != null -> target = null
+                target != null -> {
+                    target = null
+                    // 跳转进来的目标页：标题栏返回同样回来源页（而非文件夹首页）
+                    if (jumpedFromExternal) {
+                        jumpedFromExternal = false
+                        onJumpBack()
+                    }
+                }
                 editMode -> {
                     editMode = false
                     selectedDirectoryKeys = emptySet()
@@ -178,6 +232,43 @@ internal fun FolderPage(
                 showDeleteConfirm = true
             }
         }
+        // 统一的文件夹隐藏入口：行内与标题栏批量操作共用
+        fun setDirectoriesHidden(entries: List<DirectoryEntry>, hidden: Boolean) {
+            val affectedMediaIds =
+                if (hidden) {
+                    entries
+                        .flatMap { mediaIdsInDirectory(visibleMediaItems, it.key) }
+                        .toSet()
+                } else {
+                    emptySet()
+                }
+            scope.launch {
+                delay(FolderVisibilityAnimationMillis)
+                exclusionsStore.setDirectoryKeysHidden(
+                    directoryKeys = entries.map { it.key }.toSet(),
+                    hidden = hidden,
+                )
+                if (affectedMediaIds.isNotEmpty()) {
+                    onMediaIdsHidden(affectedMediaIds)
+                }
+            }
+        }
+        // 批量隐藏/显示选中文件夹：全部未隐藏才隐藏；全部已隐藏或混合（既有显示又有隐藏）→ 统一恢复显示
+        val toggleHideSelected = {
+            val entries = allDirectories.filter { it.key in selectedDirectoryKeys }
+            if (entries.isNotEmpty()) {
+                val hidden = entries.none { it.hidden }
+                setDirectoriesHidden(entries, hidden)
+                Toast.makeText(
+                    context.applicationContext,
+                    context.getString(if (hidden) R.string.hiden_dir else R.string.shown_dir),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+        // 选中文件夹中是否包含已隐藏项（含任意隐藏项 → 标题栏闭眼态，与歌曲页规则一致）
+        val selectedDirectoriesContainHidden =
+            allDirectories.any { it.key in selectedDirectoryKeys && it.hidden }
         Column(modifier = Modifier.fillMaxSize()) {
             TitleBarTransition(
                 secondaryKey = target,
@@ -190,10 +281,12 @@ internal fun FolderPage(
                         editMode = editMode,
                         selectedCount = selectedDirectoryKeys.size,
                         libraryRefreshing = libraryRefreshing,
+                        selectedContainHidden = selectedDirectoriesContainHidden,
                         onBack = handleBack,
                         showRootBack = onClose != null,
                         onEnterEdit = enterEdit,
                         onDeleteSelected = deleteSelected,
+                        onToggleHideSelected = toggleHideSelected,
                         onRefreshLibrary = onRefreshLibrary,
                     )
                 },
@@ -209,6 +302,7 @@ internal fun FolderPage(
                         showRootBack = true,
                         onEnterEdit = enterEdit,
                         onDeleteSelected = deleteSelected,
+                        onToggleHideSelected = toggleHideSelected,
                         onRefreshLibrary = onRefreshLibrary,
                     )
                 },
@@ -240,34 +334,16 @@ internal fun FolderPage(
                                     selectedDirectoryKeys.withSelection(directoryKey, selected)
                             },
                             onDirectoryVisibilityChange = { entry, hidden ->
-                                val affectedMediaIds =
-                                    if (hidden) {
-                                        mediaIdsInDirectory(
-                                            mediaItems = mediaItems,
-                                            directoryKey = entry.key,
-                                        )
-                                    } else {
-                                        emptySet()
-                                    }
-                                scope.launch {
-                                    delay(FolderVisibilityAnimationMillis)
-                                    exclusionsStore.setDirectoryKeysHidden(
-                                        directoryKeys = setOf(entry.key),
-                                        hidden = hidden,
-                                    )
-                                    if (affectedMediaIds.isNotEmpty()) {
-                                        onMediaIdsHidden(affectedMediaIds)
-                                    }
-                                }
+                                setDirectoriesHidden(listOf(entry), hidden)
                             },
                             modifier = Modifier.fillMaxSize(),
                         )
                     },
                     secondaryContent = { folderTarget ->
                         val songs =
-                            remember(mediaItems, exclusions, folderTarget.key) {
+                            remember(visibleMediaItems, exclusions, folderTarget.key) {
                                 filterMediaItemsForDirectory(
-                                        mediaItems = mediaItems,
+                                        mediaItems = visibleMediaItems,
                                         directoryKey = folderTarget.key,
                                         exclusions = exclusions,
                                     )
@@ -376,12 +452,42 @@ private fun FolderTitleBar(
     libraryRefreshing: Boolean,
     modifier: Modifier = Modifier,
     showRightActions: Boolean = true,
+    /** 编辑模式下，当前选中文件夹中是否包含已隐藏项（含任意隐藏项 → 闭眼态） */
+    selectedContainHidden: Boolean = false,
     onBack: () -> Unit,
     showRootBack: Boolean,
     onEnterEdit: () -> Unit,
     onDeleteSelected: () -> Unit,
+    onToggleHideSelected: () -> Unit,
     onRefreshLibrary: () -> Unit,
 ) {
+    // 状态眼睛：全部未隐藏（含无选中）→ 睁眼，点击后全部隐藏（动画：睁→闭）；
+    // 全部已隐藏或混合 → 闭眼，点击后统一恢复显示（动画：闭→睁）。与歌曲页编辑模式同一套。
+    var pendingEyeHidden by remember { mutableStateOf<Boolean?>(null) }
+    // 点击后立即记录眼睛的“目标静止态”，不再依赖滞后更新的 selectedContainHidden：
+    // 文件夹隐藏要等 setDirectoriesHidden 的 delay 之后才改写 exclusions，动画结束瞬间仍是旧值，
+    // 眼睛就会先播完动画再闪回旧态。本地态在动画期间保持稳定，动画结束后无缝停在正确的睁/闭眼。
+    var localEyeHidden by remember { mutableStateOf(selectedContainHidden) }
+    // 只在真实状态变化时同步（动画结束时置 pendingEyeHidden=null 不应触发本副作用：
+    // 那一刻 setDirectoriesHidden 的 delay 还没走完，selectedContainHidden 仍是旧值，
+    // 同步会把眼睛闪回旧态——这正是“播完动画再闪几下”的根源）
+    LaunchedEffect(selectedContainHidden) {
+        if (pendingEyeHidden == null) localEyeHidden = selectedContainHidden
+    }
+    val eyeTime = remember { Animatable(300f) }
+    LaunchedEffect(pendingEyeHidden) {
+        if (pendingEyeHidden != null) {
+            eyeTime.snapTo(0f)
+            eyeTime.animateTo(300f, tween(300, easing = LinearEasing))
+            pendingEyeHidden = null
+        }
+    }
+    val eyeFrame =
+        if (pendingEyeHidden != null && eyeTime.value < 160f) {
+            val index = (eyeTime.value / 10).toInt().coerceIn(0, 15)
+            FolderEyeFrames[if (pendingEyeHidden == true) index else 15 - index]
+        } else if (localEyeHidden) R.drawable.eye_icon_0016
+        else R.drawable.eye_icon_0001
     SmartisanTitleBar(
         title,
         modifier,
@@ -395,6 +501,17 @@ private fun FolderTitleBar(
                     onBack,
                 )
             else null,
+        // 编辑（多选）按钮放左上方、紧跟返回键右侧（顶栏统一规范，1.2.16）
+        navigationActions =
+            if (!editMode && showRightActions)
+                listOf(
+                    SmartisanTitleBarAction(
+                        R.drawable.standard_icon_multi_select_selector,
+                        stringResource(R.string.edit),
+                        onEnterEdit,
+                    )
+                )
+            else emptyList(),
         actions =
             when {
                 editMode ->
@@ -404,15 +521,25 @@ private fun FolderTitleBar(
                             stringResource(R.string.dialog_delete_conform),
                             onDeleteSelected,
                             enabled = selectedCount > 0,
-                        )
+                        ),
+                        // 隐藏/显示选中文件夹（原行内眼睛移到这里，占原「重新扫描」的位置）：
+                        // 图标随选中内容的三态规则切换，并带眨眼过渡动画
+                        SmartisanTitleBarAction(
+                            eyeFrame,
+                            stringResource(R.string.show_hide_songs),
+                            {
+                                if (pendingEyeHidden == null) {
+                                    pendingEyeHidden = !selectedContainHidden
+                                    localEyeHidden = !selectedContainHidden
+                                    onToggleHideSelected()
+                                }
+                            },
+                            enabled = selectedCount > 0 && pendingEyeHidden == null,
+                            tint = StatefulIconTint,
+                        ),
                     )
                 showRightActions ->
                     listOf(
-                        SmartisanTitleBarAction(
-                            R.drawable.standard_icon_multi_select_selector,
-                            stringResource(R.string.edit),
-                            onEnterEdit,
-                        ),
                         SmartisanTitleBarAction(
                             R.drawable.standard_icon_refresh_selector,
                             stringResource(R.string.library_rescan_full),
@@ -569,13 +696,7 @@ private fun FolderDirectoryRow(
         Row(
             Modifier.fillMaxWidth()
                 .requiredHeight(rowHeight)
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.listview_selector,
-                        pressed = pressed,
-                        activated = editMode && selected,
-                    )
-                )
+                .themedListRowBackground(pressed = pressed, activated = editMode && selected)
                 .semantics { if (editMode) this.selected = selected }
                 .clickable(
                     interaction,
@@ -621,7 +742,7 @@ private fun FolderDirectoryRow(
                             platformStyle = PlatformTextStyle(includeFontPadding = true),
                         ),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                 )
                 BasicText(
                     "$countText  ${entry.displayPath}",
@@ -637,7 +758,7 @@ private fun FolderDirectoryRow(
                             platformStyle = PlatformTextStyle(includeFontPadding = true),
                         ),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                 )
             }
             Box(
@@ -657,39 +778,8 @@ private fun FolderDirectoryRow(
                         },
                     )
                 if (editFraction > 0) {
-                    val frame =
-                        if (pendingHidden != null && eyeTime.value < 160f) {
-                            val index = (eyeTime.value / 10).toInt().coerceIn(0, 15)
-                            FolderEyeFrames[if (pendingHidden == true) index else 15 - index]
-                        } else if (displayedHidden) R.drawable.eye_icon_0016
-                        else R.drawable.eye_icon_0001
-                    LibraryIconButton(
-                        frame,
-                        stringResource(R.string.hide_dir_content_description),
-                        onClick = {
-                            val hidden = !entry.hidden
-                            pendingHidden = hidden
-                            Toast.makeText(
-                                    context.applicationContext,
-                                    resources.getString(
-                                        if (hidden) R.string.hiden_dir else R.string.shown_dir
-                                    ),
-                                    Toast.LENGTH_SHORT,
-                                )
-                                .show()
-                            onVisibilityChange(hidden)
-                            scope.launch {
-                                eyeTime.snapTo(0f)
-                                eyeTime.animateTo(300f, tween(300, easing = LinearEasing))
-                            }
-                        },
-                        modifier =
-                            Modifier.graphicsLayer {
-                                alpha = editFraction
-                                translationX = size.width * (1 - editFraction)
-                            },
-                        enabled = pendingHidden == null,
-                    )
+                    // 行内眼睛已移至标题栏（编辑模式右上角、删除图标旁），
+                    // 这里保留空位与箭头动画，行布局保持稳定。
                 }
             }
         }
@@ -706,16 +796,26 @@ internal fun FolderDetailPage(
     modifier: Modifier = Modifier,
 ) {
     val list = rememberLazyListState()
+    ImmersiveLocateEffect(list) {
+        tracks.indexOfFirst { it.mediaId == ImmersiveScrollBus.targetMediaId }
+    }
     val playback = rememberSongPlaybackState(browser)
     val entrance =
         rememberLibraryListEntrance(tracks, active) { list.layoutInfo.visibleItemsInfo.size }
     Column(modifier.fillMaxSize().libraryTexture()) {
         if (!active) return@Column
-        LibraryPlayActions(
-            tracks.isNotEmpty(),
-            { browser.replaceQueueAndPlay(tracks) },
-            { browser.replaceQueueAndPlayShuffled(tracks) },
-        )
+        // [1.4.24·R30 阴影被裁] LibraryTopCard 必须在外层：它的投影画在内容底边之外，
+        // 被 AnimatedVisibility 包住就会被裁掉，文件夹页因此没有播放栏下沿阴影。
+        LibraryTopCard {
+            ImmersiveActionRowVisibility {
+                LibraryPlayActions(
+                    tracks.isNotEmpty(),
+                    { browser.replaceQueueAndPlay(tracks) },
+                    { browser.replaceQueueAndPlayShuffled(tracks) },
+                    containerColor = colorResource(R.color.surface_card),
+                )
+            }
+        }
         if (tracks.isEmpty()) {
             LibraryBlank(
                 R.drawable.blank_song,
@@ -734,7 +834,7 @@ internal fun FolderDetailPage(
                             Modifier.libraryListEntrance(entrance) {
                                 index - list.firstVisibleItemIndex
                             },
-                        onClick = { browser.replaceQueueAndPlay(tracks, index) },
+                        onClick = { browser.replaceQueueAndPlay(tracks, index, keepShuffle = true) },
                         onMoreClick = onTrackMoreClick,
                         subtitle =
                             item.mediaMetadata.artist?.toString()

@@ -74,9 +74,13 @@ internal fun MusicTabContent(
     onMediaIdsHidden: (Set<String>) -> Unit,
     onRequestDeleteMediaIds: (Set<String>) -> Unit,
     onRequestSongDeleteConfirmation: (Set<String>, (() -> Unit)?) -> Unit,
+    onRequestSongHide: (Set<String>, (() -> Unit)?) -> Unit,
     onLibraryTrackMoreClick: (MediaItem) -> Unit,
     onLovedSongsTrackMoreClick: (MediaItem) -> Unit,
     onPlaylistTrackMoreClick: (MediaItem) -> Unit,
+    folderTargetKey: String? = null,
+    onFolderTargetConsumed: () -> Unit = {},
+    onFolderTargetJumpBack: () -> Unit = {},
     onRemoveFavoriteMediaIds: (Set<String>) -> Unit,
     onMoreSettingsPageActiveChanged: (Boolean) -> Unit,
     onSongSelectionChange: (String, Boolean) -> Unit,
@@ -107,6 +111,7 @@ internal fun MusicTabContent(
                 onSongSelectionChange = onSongSelectionChange,
                 onTrackMoreClick = onLibraryTrackMoreClick,
                 onRequestSongDeleteConfirmation = onRequestSongDeleteConfirmation,
+                onRequestSongHide = onRequestSongHide,
                 playbackBarOverlayHeight = playbackBarOverlayHeight,
                 modifier =
                     Modifier.fillMaxSize()
@@ -205,6 +210,7 @@ internal fun MusicTabContent(
                     hiddenMediaIds = hiddenMediaIds,
                     libraryLoaded = libraryLoaded,
                     onClose = onReturnToMore.takeIf { presentedFromMore },
+                    onSearchClick = onSearchClick,
                     onTrackMoreClick = onLovedSongsTrackMoreClick,
                     onRemoveFavoriteMediaIds = onRemoveFavoriteMediaIds,
                     modifier = activePageModifier,
@@ -219,6 +225,9 @@ internal fun MusicTabContent(
                     onMediaIdsHidden = onMediaIdsHidden,
                     onRequestDeleteMediaIds = onRequestDeleteMediaIds,
                     onTrackMoreClick = onLibraryTrackMoreClick,
+                    externalTargetKey = folderTargetKey,
+                    onExternalTargetConsumed = onFolderTargetConsumed,
+                    onJumpBack = onFolderTargetJumpBack,
                     modifier = activePageModifier,
                 )
         }

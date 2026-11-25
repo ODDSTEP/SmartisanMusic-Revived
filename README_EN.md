@@ -15,6 +15,12 @@
   <a href="README.md">中文</a> · English
 </p>
 
+> **This repository is a fork of [Mangi-11/SmartisanMusic-Revived](https://github.com/Mangi-11/SmartisanMusic-Revived).** The upstream English README is kept verbatim below. What this fork adds (USB DAC exclusive output, BASS/FFmpeg decoding paths, Monet/Material 3 theming), how to download the APK, and the licensing status are described in the [Chinese README](README.md#下载); the short version:
+>
+> - Download: [Releases](https://github.com/ODDSTEP/SmartisanMusic-Revived/releases/latest) (`ChuiziMusic-1.4.29.apk`, Android 8.1+, arm64-v8a)
+> - Package id is `cn.chuizi.music`; the upstream project ships `Music_8.1.0` resources and has no declared license, so redistribution needs permission from both the upstream and this fork's author.
+> - Third-party components: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 Smartisan never saw itself as a company concerned with visuals alone. A beautiful interface was only the beginning; a product still had to solve real problems. Design, functionality, and interaction were meant to feel coherent—easy to understand on first use, yet rich enough to reveal small surprises over time. The “artisan” in Smartisan was not about placing a polished skin over a product, but about caring for every touch, response, and pause.
 
 Smartisan Music is one of the clearest expressions of that idea. Its turntable, tonearm, scratching, and vinyl crackle make digital music feel tangible, while songs, albums, and the library remain calm and legible. The physical playfulness should never come at the expense of playback or organization; what deserves to be preserved is the balance between texture, order, and utility.

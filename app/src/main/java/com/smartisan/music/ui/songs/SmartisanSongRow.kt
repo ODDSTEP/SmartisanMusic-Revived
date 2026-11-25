@@ -1,9 +1,14 @@
 package com.smartisan.music.ui.songs
 
+import android.widget.Toast
+import com.smartisan.music.ui.components.smartisanMarquee
+import com.smartisan.music.playback.isDsdItem
+import com.smartisan.music.playback.PlaybackPolicy
+import androidx.compose.ui.draw.alpha
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -34,6 +39,7 @@ import com.smartisan.music.playback.LocalAudioLibrary
 import com.smartisan.music.playback.LocalPlaybackBrowser
 import com.smartisan.music.playback.isPlaybackActiveForUi
 import com.smartisan.music.ui.components.*
+import com.smartisan.music.ui.theme.themedListRowBackground
 
 internal data class SongPlaybackState(val mediaId: String?, val playing: Boolean)
 
@@ -80,6 +86,8 @@ internal fun SmartisanSongRow(
     displayMode: SongSortDisplayMode = SongSortDisplayMode.Name,
     durationText: String? = null,
     contentEndInset: androidx.compose.ui.unit.Dp = 0.dp,
+    /** 1.2.23：实时播放次数（来自 Room 流）。非空时优先于 MediaItem extras 的静态快照，使「按播放次数」即时刷新。 */
+    livePlayCount: Long? = null,
     subtitle: String? = null,
     playback: SongPlaybackState = rememberSongPlaybackState(),
     onCheckboxBoundsChanged: (Rect?) -> Unit = {},
@@ -109,8 +117,7 @@ internal fun SmartisanSongRow(
     val album = metadata.albumTitle?.toString()?.takeIf(String::isNotBlank)
     val secondary =
         subtitle
-            ?: if (displayMode == SongSortDisplayMode.Score || album == null) artist
-            else "$artist - $album"
+            ?: if (album == null) artist else "$artist - $album"
     val textDirection =
         if (
             androidx.compose.ui.platform.LocalLayoutDirection.current ==
@@ -119,6 +126,11 @@ internal fun SmartisanSongRow(
             androidx.compose.ui.text.style.TextDirection.ContentOrRtl
         else androidx.compose.ui.text.style.TextDirection.ContentOrLtr
     val playing = !editMode && item.mediaId == playback.mediaId
+    // 1.3.5 实验性功能：不播放 DSD 格式音频时，该行变灰且不可点击
+    val excludeDsd by PlaybackPolicy.excludeDsdFlow.collectAsState()
+    val dsdFiltered = excludeDsd && item.isDsdItem()
+    // 1.3.6：点击被过滤的 DSD 行时弹出与「播放失败 / 不支持的音乐格式」同款的悬浮提示
+    val context = androidx.compose.ui.platform.LocalContext.current
     CompositionLocalProvider(
         androidx.compose.ui.platform.LocalLayoutDirection provides
             androidx.compose.ui.unit.LayoutDirection.Ltr
@@ -128,24 +140,31 @@ internal fun SmartisanSongRow(
                 .fillMaxWidth()
                 .height(dimensionResource(R.dimen.listview_item_height))
                 .clipToBounds()
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.listview_selector,
-                        pressed = pressed,
-                        activated = editMode && selected,
-                    )
-                )
+                .themedListRowBackground(pressed = pressed, activated = editMode && selected)
                 .semantics { if (editMode) this.selected = selected }
                 .clickable(
                     interaction,
                     null,
+                    enabled = true,
                     role = if (editMode) Role.Checkbox else Role.Button,
                     onClick =
                         smartisanClick {
-                            if (editMode) onSelectionChange(!selected) else onClick()
+                            when {
+                                // 1.3.7：编辑模式优先——DSD 行也要能直接勾选，不弹播放提示
+                                editMode -> onSelectionChange(!selected)
+                                dsdFiltered ->
+                                    Toast.makeText(
+                                        context,
+                                        R.string.dsd_filtered_click_hint,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                else -> onClick()
+                            }
                         },
                 )
-                .padding(end = contentEndInset),
+                .padding(end = contentEndInset)
+                // 1.3.7：非编辑模式整行维持半透明；编辑模式整行恢复正常不透明
+                .alpha(if (dsdFiltered && !editMode) 0.35f else 1f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.width((checkWidth + checkInset) * progress).fillMaxHeight()) {
@@ -181,7 +200,9 @@ internal fun SmartisanSongRow(
                             null,
                             Modifier.padding(
                                 end = dimensionResource(R.dimen.album_song_index_margin_left)
-                            ),
+                            )
+                                // 1.3.7：编辑模式整行恢复不透明后，只让 DSD 徽章保持灰
+                                .alpha(if (dsdFiltered && editMode) 0.35f else 1f),
                         )
                     }
                     BasicText(
@@ -198,17 +219,13 @@ internal fun SmartisanSongRow(
                                 platformStyle = PlatformTextStyle(includeFontPadding = true),
                             ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                     )
                 }
             }
-            if (displayMode == SongSortDisplayMode.Score) {
-                Spacer(Modifier.width(dimensionResource(R.dimen.quick_context_line_height)))
-                SongRating(item.songRating().toInt())
-                Spacer(Modifier.width(30.dp))
-            } else if (displayMode == SongSortDisplayMode.PlayCount) {
+            if (displayMode == SongSortDisplayMode.PlayCount) {
                 BasicText(
-                    item.songPlayCount().toString(),
+                    (livePlayCount ?: item.songPlayCount()).toString(),
                     Modifier.padding(start = 18.dp),
                     style =
                         TextStyle(
@@ -221,6 +238,45 @@ internal fun SmartisanSongRow(
                             platformStyle = PlatformTextStyle(includeFontPadding = true),
                         ),
                 )
+            } else if (displayMode == SongSortDisplayMode.Quality) {
+                val summary = songQualitySummary(item)
+                if (summary != null) {
+                    BasicText(
+                        summary,
+                        Modifier.padding(start = 10.dp),
+                        style =
+                            TextStyle(
+                                color =
+                                    smartisanPressedTextColor(
+                                        colorResource(R.color.list_text_color_small),
+                                        pressed,
+                                    ),
+                                fontSize = smartisanTextSize(R.dimen.text_size_micro),
+                                platformStyle = PlatformTextStyle(includeFontPadding = true),
+                            ),
+                        maxLines = 1,
+                    )
+                }
+            } else if (displayMode == SongSortDisplayMode.AddedTime) {
+                // 按添加时间排序时，行尾给出日期（文件写入手机的时间），便于核对排序结果
+                val addedText = item.songAddedTimeText()
+                if (addedText.isNotEmpty()) {
+                    BasicText(
+                        addedText,
+                        Modifier.padding(start = 10.dp),
+                        style =
+                            TextStyle(
+                                color =
+                                    smartisanPressedTextColor(
+                                        colorResource(R.color.list_text_color_small),
+                                        pressed,
+                                    ),
+                                fontSize = smartisanTextSize(R.dimen.text_size_micro),
+                                platformStyle = PlatformTextStyle(includeFontPadding = true),
+                            ),
+                        maxLines = 1,
+                    )
+                }
             }
             if (durationText != null)
                 BasicText(
@@ -261,25 +317,6 @@ internal fun SmartisanSongRow(
     }
 }
 
-@Composable
-private fun SongRating(rating: Int) {
-    Box(Modifier.height(14.dp)) {
-        Image(
-            rememberSmartisanDrawablePainter(R.drawable.song_score_empty),
-            null,
-            Modifier.fillMaxHeight(),
-        )
-        Image(
-            rememberSmartisanDrawablePainter(R.drawable.song_score_full),
-            null,
-            Modifier.fillMaxHeight().drawWithContent {
-                clipRect(right = size.width * rating.coerceIn(0, 5) / 5f) {
-                    this@drawWithContent.drawContent()
-                }
-            },
-        )
-    }
-}
 
 internal fun MediaItem.qualityBadge(): Int? =
     when (mediaMetadata.extras?.getString(LocalAudioLibrary.AudioQualityBadgeExtraKey)) {
@@ -289,6 +326,7 @@ internal fun MediaItem.qualityBadge(): Int? =
         "aiff" -> R.drawable.audio_quality_aiff
         "alac" -> R.drawable.audio_quality_alac
         "cue" -> R.drawable.audio_quality_cue
+        "dsd" -> R.drawable.audio_quality_dsd
         else -> null
     }
 
@@ -307,7 +345,7 @@ internal fun SmartisanPlayingTitle(
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         BasicText(
             title,
-            Modifier.weight(1f, fill = false).basicMarquee(iterations = Int.MAX_VALUE),
+            Modifier.weight(1f, fill = false).smartisanMarquee(),
             style =
                 TextStyle(
                     textDirection = textDirection,
@@ -333,4 +371,15 @@ internal fun SmartisanPlayingTitle(
                 Modifier.padding(start = 10.dp),
             )
     }
+}
+
+internal fun songQualitySummary(item: androidx.media3.common.MediaItem): String? {
+    val hz = item.songSampleRateHz()
+    if (hz <= 0 && item.songBitrateBps() <= 0) return null
+    return com.smartisan.music.platform.media.AudioQualityTiers.summary(
+        sampleRateHz = hz,
+        bitsPerSample = item.songBitsPerSample(),
+        bitrateBps = item.songBitrateBps(),
+        container = "",
+    )
 }

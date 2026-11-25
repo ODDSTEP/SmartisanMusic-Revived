@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -56,12 +58,14 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartisan.music.R
+import com.smartisan.music.playback.UsbVolume
 import com.smartisan.music.playback.EmbeddedLyrics
 import com.smartisan.music.playback.EmbeddedLyricsLine
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import com.smartisan.music.ui.theme.themedInkRes
 
 // Reverse resources:
 // - lrc_layout.xml: full-height ListView with 80dp vertical fading edges
@@ -73,7 +77,7 @@ private val PlaybackLyricsPrimaryStyle: TextStyle
         TextStyle(
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
-            color = colorResource(R.color.panel_action_text),
+            color = themedInkRes(R.color.panel_action_text),
             textAlign = TextAlign.Center,
         )
 private val PlaybackLyricsSecondaryStyle: TextStyle
@@ -91,6 +95,8 @@ private val PlaybackLyricsParagraphGap = 16.dp
 private const val PlaybackLyricsSmoothScrollMaxLineJump = 4
 private const val PlaybackLyricsManualScrollResumeDelayMillis = 2_800L
 private const val PlaybackLyricsManualScrollMarkIntervalMillis = 220L
+/** 1.3.3：位置一次跳变超过这个值视为 seek，歌词要立刻吸附并退出手动浏览窗口。 */
+private const val PlaybackLyricsSeekSnapThresholdMs = 2_000L
 
 @Composable
 internal fun PlaybackBottomControls(
@@ -106,6 +112,8 @@ internal fun PlaybackBottomControls(
     onVolumeChange: (Float) -> Unit,
 ) {
     val density = LocalDensity.current
+    // [v22·音量] 独占会话存在时才显示音量胶囊（共享输出走系统音量条，不需要）。
+    val usbSession by UsbVolume.sessionActiveFlow.collectAsState()
     val bottomSpacing = playbackBottomControlsBottomSpacing(bottomInset)
     val volumeEntranceProgress =
         playbackEntranceProgress(
@@ -139,9 +147,16 @@ internal fun PlaybackBottomControls(
                 onNextClick = onNextClick,
                 onShuffleClick = onShuffleClick,
             )
+            if (usbSession) {
+                PlaybackVolumeBadge(
+                    Modifier.padding(top = PlaybackBottomControlsVolumeTopPadding),
+                )
+            }
             PlaybackVolumeBar(
                 modifier =
-                    Modifier.padding(top = PlaybackBottomControlsVolumeTopPadding).graphicsLayer {
+                    Modifier.padding(
+                        top = if (usbSession) PlaybackVolumeBadgeGap else PlaybackBottomControlsVolumeTopPadding
+                    ).graphicsLayer {
                         translationY = (1f - volumeEntranceProgress) * controlEntranceOffsetPx
                     },
                 width = width,
@@ -152,6 +167,8 @@ internal fun PlaybackBottomControls(
         Spacer(modifier = Modifier.height(bottomSpacing))
     }
 }
+
+private val PlaybackVolumeBadgeGap = 6.dp
 
 private fun playbackBottomControlsBottomSpacing(bottomInset: Dp): Dp {
     return (PlaybackBottomControlsBottomSpacing + bottomInset).coerceAtLeast(
@@ -227,6 +244,25 @@ internal fun PlaybackLyricsOverlay(
                         }
                     }
                 }
+
+            // 1.3.3：参考 SkeuoMusic 的「大跳变清除手动浏览窗口」思路。
+            // 用户手动翻过歌词后 autoFollowState 会进入 suspended，此时拖进度条，
+            // 旧逻辑要等 2.8 秒才恢复跟随，看起来就是「seek 后歌词不动」。
+            // 检测到位置大跳变就立刻恢复跟随并瞬移到目标行，不做平滑动画。
+            val lastTimingPosition = remember(mediaId) { longArrayOf(currentPositionMs) }
+            val latestFocusIndex by rememberUpdatedState(renderModel.focusIndex)
+            val latestMode by rememberUpdatedState(renderModel.mode)
+            LaunchedEffect(currentPositionMs) {
+                val previous = lastTimingPosition[0]
+                lastTimingPosition[0] = currentPositionMs
+                if (abs(currentPositionMs - previous) >= PlaybackLyricsSeekSnapThresholdMs &&
+                    latestMode == PlaybackLyricsMode.Timed
+                ) {
+                    autoFollowState.resume()
+                    autoFollowState.resetFocusTracking()
+                    listState.scrollToItem(index = latestFocusIndex)
+                }
+            }
 
             LaunchedEffect(
                 autoFollowState.suspended,
@@ -345,7 +381,7 @@ private fun PlaybackLyricsLineText(
             text = text,
             style = style,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
             modifier = Modifier.fillMaxWidth(),
         )
     }

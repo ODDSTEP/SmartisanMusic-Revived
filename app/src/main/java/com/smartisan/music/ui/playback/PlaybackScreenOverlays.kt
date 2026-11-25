@@ -19,7 +19,7 @@ internal fun PlaybackMoreActionOverlays(
     sleepTimerState: PlaybackSleepTimerState,
     bottomInsetPx: Int,
     onAddToPlaylistClick: () -> Unit,
-    onAddToQueueClick: () -> Unit,
+    onAudioOutputClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
     onShareClick: () -> Unit,
     onSleepTimerClick: () -> Unit,
@@ -41,7 +41,7 @@ internal fun PlaybackMoreActionOverlays(
         callbacks =
             PlaybackMoreActionCallbacks(
                 onAddToPlaylistClick = onAddToPlaylistClick,
-                onAddToQueueClick = onAddToQueueClick,
+                onAudioOutputClick = onAudioOutputClick,
                 onFavoriteToggle = onFavoriteToggle,
                 onShareClick = onShareClick,
                 onLyricsToggle = onLyricsToggle,

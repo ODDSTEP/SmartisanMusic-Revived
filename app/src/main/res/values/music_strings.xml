@@ -2,14 +2,205 @@
     <string name="cd_play_all">播放列表</string>
     <string name="cd_shuffle">随机播放</string>
     <string name="sort_by_song_name">歌曲名</string>
+    <string name="sort_by_sample_rate">采样率</string>
+    <string name="sort_by_quality">音质</string>
+    <string name="sort_by_format">格式</string>
+    <string name="sort_by_duration">时长</string>
+    <string name="sort_by_bitrate">码率</string>
+    <string name="sort_by_bit_depth">位深</string>
     <string name="sort_by_song_play_time">播放次数</string>
+    <string name="sort_by_added_time">添加时间</string>
     <string name="sort_by_song_score">评分</string>
-    <string name="sort_by_song_update_time">添加时间</string>
+    <string name="sort_by_artist">歌手名称</string>
     <string name="nostar">无评分</string>
-    <string name="section_today">今天</string>
-    <string name="section_day_before">一天前</string>
-    <string name="section_week_before">一周前</string>
-    <string name="section_month_before">一月前</string>
     <string name="song_score_header">%1$d 星评分</string>
     <string name="tab_more">更多</string>
+    <string name="volume_normalization">音量均衡</string>
+    <string name="export_logs">导出日志</string>
+    <string name="export_logs_summary">打包运行日志并发送</string>
+    <string name="export_logs_failed">日志为空或导出失败</string>
+    <string name="transcode_cache">转码缓存</string>
+    <string name="transcode_cache_clear_confirm">确认清理转码缓存？</string>
+    <string name="transcode_cache_cleared">转码缓存已清理</string>
+    <string name="all_files_access_title">开启「所有文件访问」</string>
+    <string name="all_files_access_message">DSD（DFF/DSF）、DTS、WavPack 等格式不被系统归类为音频，需要「所有文件访问」权限才能读取并播放。开启后回到应用即可生效。</string>
+    <string name="all_files_access_go">去开启</string>
+    <string name="action_view_album">查看专辑</string>
+    <string name="action_view_folder">查看文件夹</string>
+    <string name="action_view_artist">查看歌手</string>
+    <string name="action_song_info">歌曲信息</string>
+    <string name="action_share">分享</string>
+    <string name="info_label_title">歌曲</string>
+    <string name="info_label_artist">歌手</string>
+    <string name="info_label_album">专辑</string>
+    <string name="info_label_duration">时长</string>
+    <string name="info_label_format">格式</string>
+    <string name="info_label_sample_rate">采样率</string>
+    <string name="info_label_bit_depth">位深</string>
+    <string name="info_label_bitrate">码率</string>
+    <string name="info_label_folder">所在文件夹</string>
+    <string name="info_label_file_name">文件名</string>
+    <string name="edit_song_info">编辑歌曲信息</string>
+    <string name="edit_song_info_cover">专辑封面</string>
+    <string name="edit_song_info_choose_cover">选择图片</string>
+    <string name="edit_song_info_saved">已写入歌曲文件，正在刷新媒体库</string>
+    <string name="edit_song_info_failed">保存失败：%1$s</string>
+    <string name="edit_song_info_need_permission">需要授权写入才能修改歌曲文件</string>
+    <string name="audio_output">音频输出</string>
+    <string name="audio_output_input_sample_rate">输入采样率</string>
+    <string name="audio_output_output_sample_rate">输出采样率</string>
+    <string name="audio_output_input_bit_depth">输入位深</string>
+    <string name="audio_output_output_bit_depth">输出位深</string>
+    <string name="audio_output_output_port">输出端口</string>
+    <string name="audio_output_input_channels">输入通道数</string>
+    <string name="audio_output_effects_note_value">高规格输出，已暂停音效以保证音质</string>
+    <string name="audio_output_effects_note">音效状态</string>
+    <string name="audio_output_output_channels">输出通道数</string>
+    <string name="audio_output_format">格式</string>
+    <string name="settings_section_file_scan">文件扫描</string>
+    <string name="settings_filter_non_song">过滤非歌曲文件和文件夹</string>
+    <string name="settings_skip_small_files">不扫描500KB以下的歌曲</string>
+    <string name="settings_skip_short_songs">不扫描60秒以下的歌曲</string>
+    <string name="file_scan_applied">文件扫描设置已生效</string>
+    <string name="output_port_wired">有线耳机</string>
+    <string name="output_port_bluetooth">蓝牙</string>
+    <string name="output_port_usb">USB 设备</string>
+    <string name="output_port_speaker">扬声器</string>
+    <string name="output_channels_stereo">2（立体声）</string>
+    <string name="output_channels_count">%1$d 声道</string>
+
+    <!-- 歌曲信息 -->
+    <string name="info_label_file_size">歌曲大小</string>
+
+    <!-- 播放失败原因 -->
+    <string name="playback_error_unsupported_format">不支持的音频格式</string>
+    <string name="playback_error_decode_failed">解码失败：设备解码器不支持该规格</string>
+    <string name="playback_error_output_failed">音频输出初始化失败</string>
+    <string name="playback_error_io">无法读取音频文件</string>
+    <string name="playback_error_generic">播放失败</string>
+
+    <!-- USB 独占 -->
+    <string name="settings_section_output">音频输出</string>
+    <string name="usb_exclusive">USB 独占</string>
+    <!-- 1.4.6 独占性能优先（借鉴海贝/飞傲，只保对口卡顿的 3 项） -->
+    <string name="usb_exclusive_perf_priority">独占性能优先</string>
+    <string name="usb_exclusive_perf_priority_desc_on">已开启：提音频线程优先级、请求性能提示、保持后台活动。仅减少部分机型后台限频，可能略增耗电；彻底避免需加入电池优化白名单。</string>
+    <string name="usb_exclusive_perf_priority_desc_off">已关闭：不请求性能提示，后台更易被限频；切后台卡顿可重新开启。</string>
+    <string name="usb_exclusive_battery_guide">允许后台活动</string>
+    <string name="usb_exclusive_battery_guide_summary">前往系统设置将本应用加入电池优化白名单（需手动授权）</string>
+    <string name="usb_exclusive_summary">把输出锁定到 USB 解码器，绕开系统混音</string>
+    <string name="usb_device_none">未检测到 USB 音频设备</string>
+    <string name="usb_device_connected">已连接 %1$s</string>
+    <string name="usb_exclusive_active">独占输出中 · %1$s</string>
+    <string name="usb_exclusive_permission_pending">独占未建立，当前为系统共享输出</string>
+    <string name="volume_step_down">音量减一格</string>
+    <string name="volume_step_up">音量加一格</string>
+    <string name="usb_exclusive_inactive">共享输出（系统混音）</string>
+    <string name="usb_permission_needed">需要 USB 设备授权</string>
+    <string name="usb_device_lost">USB 音频设备已断开，播放已暂停</string>
+    <!-- v10·独占会话健康度熔断提示 -->
+    <string name="usb_exclusive_degraded">USB 独占通道不稳定，已自动切换到稳定输出模式（音效照常生效）。如需重试独占，请关闭再打开 USB 独占开关。</string>
+    <string name="usb_not_granted">未获得 USB 设备授权，仍走系统输出</string>
+    <string name="usb_exclusive_real">接管 USB 声卡（UAC 直出），系统混音与重采样全绕开</string>
+    <!-- 1.4.3 甲路线：A 版系统直读如实标注 USB 独占不可用（开关禁用 + 多行说明） -->
+    <string name="usb_exclusive_direct_unavailable">系统直读版不支持</string>
+    <string name="usb_exclusive_direct_locked">不可用</string>
+    <string name="usb_exclusive_direct_note">切到双路/流式引擎可用独占</string>
+    <!-- 独占期间的音量模式 -->
+    <string name="usb_volume_mode">音量模式</string>
+    <string name="usb_volume_mode_software">软件音量</string>
+    <string name="usb_volume_mode_hardware">硬件音量</string>
+    <string name="usb_volume_mode_auto">自动</string>
+    <string name="usb_volume_mode_summary">独占绕开系统音量，点按切换：%1$s</string>
+    <string name="usb_volume_mode_hint_software">由本软件做数字衰减，对所有解码器都有效</string>
+    <string name="usb_volume_mode_hint_hardware">改解码器自身增益，音质最好（部分解码器不支持）</string>
+    <string name="usb_volume_mode_hint_auto">前台按音量键调硬件音量，后台调软件音量</string>
+    <string name="usb_volume">USB 音量</string>
+    <string name="usb_volume_summary">独占时由本软件做数字衰减</string>
+    <!-- 插入音频设备自动续播（描述改为操作后弹窗展示，1.2.3） -->
+    <string name="plug_auto_resume">插入设备自动续播</string>
+    <string name="plug_auto_resume_summary">接入有线耳机或 USB 解码器时自动恢复播放</string>
+    <string name="plug_auto_resume_desc_on">已开启：插入有线耳机或 USB 解码器时，会自动恢复上次的播放，无需手动点播放。</string>
+    <string name="plug_auto_resume_desc_off">已关闭：插入耳机或解码器后不会自动播放，需要手动点播放键。</string>
+    <string name="settings_desc_dialog_button">知道了</string>
+    <!-- 独占音量条 -->
+    <string name="usb_volume_hud_hardware">硬件音量</string>
+    <string name="usb_volume_hud_software">软件音量</string>
+
+    <!-- [v22] 音量模式（口径对齐 Salt Player：自动 / 数字音量 / DAC 硬件音量） -->
+    <string name="usb_volume_mode_digital">数字音量</string>
+    <string name="usb_volume_mode_dac">DAC 硬件音量</string>
+    <string name="usb_volume_current">%1$s · %2$s</string>
+    <string name="usb_volume_hw_supported">硬件可用</string>
+    <string name="usb_volume_hw_unsupported">硬件不可用</string>
+    <string name="usb_volume_mode_desc_auto">播放开始后检测 DAC：能调硬件音量就优先硬件（音频字节不动），否则用数字音量。</string>
+    <string name="usb_volume_mode_desc_digital">把音量档位映射为 -60~0 dB 后在 PCM 上衰减，精度高、所有 DAC 可用，但会破坏 bit-perfect。</string>
+    <string name="usb_volume_mode_desc_hardware">通过 USB 控制传输直接改 DAC 芯片内部音量；音频字节完全不动，可与零损失同时使用。部分 DAC 不支持。</string>
+    <string name="usb_volume_mode_zero_loss_forced">零损失已开启：音量自动走 DAC 硬件音量，保证逐字节直传。</string>
+    <string name="usb_volume_mode_zero_loss_no_hw">零损失已开启，但该 DAC 不支持硬件音量：请把音量拉到满档，否则会自动走普通路径（零损失失效）。</string>
+    <string name="usb_volume_mode_hw_unsupported">该 DAC 不支持硬件音量：实际会走数字（软件）音量，调音量不会直接改 DAC 芯片。</string>
+    <string name="usb_tpdf_dither">TPDF 抖动</string>
+    <string name="usb_tpdf_dither_summary">数字衰减量化前加极低电平噪声</string>
+    <string name="usb_tpdf_dither_desc_on">已开启：数字音量衰减后量化到目标位深前，加入 ±1 LSB 的三角分布噪声，把低音量下的截断失真换成听不见的白噪。</string>
+    <string name="usb_tpdf_dither_desc_off">已关闭：数字衰减直接量化。高音量下差别很小，低音量时开启更干净。</string>
+    <!-- APE 等容器不支持的明确提示 -->
+    <string name="playback_error_ape_unsupported">不支持 APE（猴声无损）格式，请转成 FLAC/WAV</string>
+
+    <!-- 理解记忆 -->
+    <string name="memory">理解记忆</string>
+    <string name="memory_summary">我记住的听歌习惯</string>
+    <string name="memory_total_plays">累计播放</string>
+    <string name="memory_total_plays_value">%1$d 次 · 约 %2$s</string>
+    <string name="memory_top_artist">最常听的歌手</string>
+    <string name="memory_top_album">最常听的专辑</string>
+    <string name="memory_active_hours">常听时段</string>
+    <string name="memory_hi_res_ratio">高规格音源占比</string>
+    <string name="memory_loved">已标记为喜欢</string>
+    <string name="memory_most_skipped">常被跳过的歌</string>
+    <string name="memory_recent">最近常听</string>
+    <string name="memory_empty">记忆还不够多，多听几首歌再来吧</string>
+    <string name="memory_clear">清空记忆</string>
+    <string name="memory_cleared">记忆已清空</string>
+    <string name="memory_hour_range">%1$d:00 – %2$d:00</string>
+    <string name="memory_plays_suffix">%1$d 次</string>
+
+    <!-- 理解记忆 -->
+    <string name="settings_section_ui">界面</string>
+    <string name="settings_section_memory">记忆</string>
+    <!-- 1.4.11 · S16 记忆式首页开关 -->
+    <string name="remember_song_scroll">记住歌曲页位置</string>
+    <string name="remember_song_scroll_desc_on">已开启：回到歌曲页时接着上次的位置看。仅记录本地列表位置，无推荐、无联网。</string>
+    <string name="remember_song_scroll_desc_off">已关闭：每次进入歌曲页都从列表顶部开始。</string>
+    <!-- 1.4.11 · S12 单包三引擎切换 -->
+    <string name="settings_section_engine">播放引擎</string>
+    <string name="playback_engine">播放引擎</string>
+    <string name="engine_official">双路正式版（推荐）</string>
+    <string name="engine_official_summary">常见格式直读零缓存，冷门格式与USB独占自解码</string>
+    <string name="engine_direct">系统直读</string>
+    <string name="engine_direct_summary">全格式零缓存秒开，无均衡器/USB独占</string>
+    <string name="engine_capability_note">引擎能力对照：\n· 系统直读——几乎全格式直接播、零缓存、秒开；系统 MediaPlayer 出声，拿不到解码后 PCM，USB 独占、均衡器、混响、浮点 WAV 在此引擎下失效（相关开关已置灰）。\n· 双路正式版——常见格式零缓存直读，冷门格式与 USB 独占自解码；均衡器与全部音效可用。\n· 流式解码——冷门格式边解边播不落盘，均衡器与全部音效可用；拖动进度稳定性待实机验证。\n切换引擎会立即重建并恢复上一首歌曲与进度。</string>
+    <string name="engine_stream">流式解码</string>
+    <string name="engine_stream_summary">冷门格式边解边播不落盘，保留全部音效</string>
+    <string name="engine_restart_hint">切换即时生效</string>
+    <!-- [1.4.25·R67a] 切引擎恢复后自动播开关 -->
+    <string name="engine_restore_autoplay">恢复后自动播放</string>
+    <string name="engine_restore_autoplay_desc_on">已开启：切换引擎恢复上一首歌曲和进度后自动继续播放。</string>
+    <string name="engine_restore_autoplay_desc_off">已关闭：切换引擎后恢复上一首歌曲和进度，但保持暂停，点播放键才继续。</string>
+
+
+    <string name="engine_restart_note">切换后立即生效，自动恢复上一首歌曲与进度。</string>
+
+    <!-- 图标按钮名称提示（描述改为操作后弹窗展示，1.2.3） -->
+    <string name="icon_name_hint">长按显示图标名称</string>
+    <string name="icon_name_hint_summary">开启后，长按没有文字的图标按钮会在旁边显示它的名字</string>
+    <string name="icon_name_hint_desc_on">已开启：长按界面上没有文字的图标按钮，会在它旁边弹出小标签显示这个名字，方便辨认。</string>
+    <string name="icon_name_hint_desc_off">已关闭：长按图标按钮不再显示名称标签。</string>
+
+    <!-- 通知中心 -->
+    <string name="notification_channel_name">播放控制</string>
+    <string name="notification_channel_description">显示正在播放的歌曲与播放控制</string>
+    <string name="notification_action_playback_mode">播放顺序</string>
+    <string name="notification_action_favorite">喜欢</string>
+    <string name="notification_action_unfavorite">取消喜欢</string>
+    <string name="notification_progress">%1$s / %2$s</string>
 </resources>

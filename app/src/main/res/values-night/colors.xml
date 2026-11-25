@@ -26,4 +26,11 @@
     <color name="playing_time_text">#9fa1a4</color>
     <color name="title_bar_background">#292c31</color>
     <color name="quickbar_grid_background">#34373c</color>
+    <color name="bottom_bar_surface">#282b30</color>
+    <color name="bottom_bar_gradient_top">#2a2d32</color>
+    <!-- [1.4.24·R34 自绘通知] 通知栏文字色：深色通知底用白字 -->
+    <color name="notif_text_primary">#ffffffff</color>
+    <color name="notif_text_secondary">#b3ffffff</color>
+    <!-- [1.4.25·R69] 深色通知底上 #e64040 偏暗，提亮一档保证与白字同屏时可辨。 -->
+    <color name="notif_mode_active">#ff6b6b</color>
 </resources>

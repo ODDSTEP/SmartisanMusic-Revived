@@ -179,12 +179,6 @@ internal fun NavigationEditorOverlay(
                                     )
                                 }
                             else Modifier
-                        )
-                        .padding(
-                            top =
-                                if (overflow)
-                                    dimensionResource(R.dimen.smartisan_switch_bar_top_rg_padding)
-                                else 0.dp
                         ),
                     inOverflow = overflow,
                 )

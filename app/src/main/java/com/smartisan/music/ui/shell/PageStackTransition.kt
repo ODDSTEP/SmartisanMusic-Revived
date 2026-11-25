@@ -20,10 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.zIndex
 import com.smartisan.music.R
+import com.smartisan.music.ui.theme.monetTitleBarSurface
 import com.smartisan.music.ui.navigation.LocalNavigationTitleInline
 import com.smartisan.music.ui.navigation.LocalProjectedNavigationTitle
 import com.smartisan.music.ui.navigation.ProjectedNavigationTitle
@@ -101,7 +101,12 @@ internal fun <T : Any> PageStackTransition(
             Box(
                 Modifier.fillMaxWidth()
                     .height(titleHeight)
-                    .background(colorResource(R.color.title_bar_background))
+                    // [v10·主页顶栏莫奈取色] 原用裸 colorResource(title_bar_background) 恒白：
+                    // 主页标题走投影路径(projectTitles)时，SmartisanTitleBar 的 monetSurface 被跳过，
+                    // 底色完全由这里提供，故主页恒白、从设置返回先莫奈后退白。改为与其他顶栏一致的
+                    // monetSurface，投影路径与内联路径口径统一。
+                    // [v12] 顶栏向底栏看齐：莫奈开=底栏同款色，莫奈关=官方原色零改动。
+                    .background(monetTitleBarSurface())
                     .zIndex(2f)
             ) {
                 RenderProjectedNavigationTitle(primaryTitle, SmartisanTitleMotion(motion, false))

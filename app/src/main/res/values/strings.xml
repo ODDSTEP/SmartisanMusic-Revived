@@ -1,17 +1,19 @@
 <resources>
-    <string name="app_name">音乐</string>
+    <string name="app_name">锤子音乐</string>
     <string name="back">返回</string>
     <string name="done">完成</string>
     <string name="save">保存</string>
     <string name="rename_continue">继续</string>
     <string name="edit">编辑</string>
     <string name="setting">设置</string>
+    <string name="more_section_pages">页面</string>
     <string name="tab_style">风格</string>
     <string name="collect_music">我喜欢的歌曲</string>
     <string name="tab_directory">文件夹</string>
     <string name="tab_play_list">播放列表</string>
     <string name="tab_artist">艺术家</string>
     <string name="tab_album">专辑</string>
+    <string name="view_mode">视图</string>
     <string name="tab_song">歌曲</string>
     <string name="new_playlist">新建播放列表</string>
     <string name="no_playlist">暂无播放列表</string>
@@ -42,7 +44,7 @@
     <string name="s_edit_track_list">编辑列表</string>
     <string name="no_song">暂无歌曲</string>
     <string name="show_song">本地歌曲将显示在这里</string>
-    <string name="no_saved_song">暂无收藏的歌曲</string>
+    <string name="no_saved_song">暂无喜欢的歌曲</string>
     <string name="no_folder">暂无文件夹</string>
     <string name="show_folder">本地歌曲所在的文件夹将显示在这里</string>
     <string name="no_style">暂无风格</string>
@@ -68,6 +70,7 @@
     <string name="hiden_dir">已隐藏</string>
     <string name="shown_dir">已显示</string>
     <string name="hide_dir_content_description">隐藏显示</string>
+    <string name="show_hide_songs">显示/隐藏</string>
     <string name="clear_search_text">清空搜索内容</string>
     <string name="search_history">搜索历史</string>
     <string name="suggestion">建议结果</string>
@@ -77,19 +80,11 @@
     <string name="settings_section_playback">播放体验</string>
     <string name="settings_section_library">资料库</string>
     <string name="settings_section_appearance">外观</string>
-    <string name="theme_settings">主题设置</string>
+    <string name="settings_section_diagnostics">诊断与日志</string>
+    <string name="theme_settings">深色模式设置</string>
     <string name="theme_mode_system">跟随系统</string>
     <string name="theme_mode_light">浅色模式</string>
     <string name="theme_mode_dark">深色模式</string>
-    <string name="app_icon">应用图标</string>
-    <string name="app_icon_choose">选择桌面图标</string>
-    <string name="app_icon_original">原版图标</string>
-    <string name="app_icon_original_summary">锤子音乐原版拟物化图标</string>
-    <string name="app_icon_modern">真我黑胶图标</string>
-    <string name="app_icon_modern_summary">更适合现代 Android 的自适应图标</string>
-    <string name="app_icon_refresh_hint">realme 已暂停中国市场，realme UI 也随之谢幕。保留这枚 realme UI 7.0 音乐图标，以此致敬。桌面图标切换可能需要片刻刷新；系统设置等界面始终显示默认的真我黑胶图标。</string>
-    <string name="app_icon_change_failed">无法更换应用图标，请稍后重试</string>
-    <string name="app_icon_option_description">%1$s，%2$s</string>
     <string name="search_no_result">无搜索结果</string>
     <string name="library_root">本地音乐</string>
     <string name="unknown_song_title">未知歌曲</string>
@@ -127,7 +122,7 @@
     <string name="playqueue_btn_show_content_description">显示播放队列</string>
     <string name="playqueue_btn_hide_content_description">隐藏播放队列</string>
     <string name="str_clear_play_task">清空播放队列</string>
-    <string name="action_collect_song">收藏歌曲</string>
+    <string name="action_collect_song">喜欢这首歌</string>
     <string name="player_more_actions">更多操作</string>
     <string name="select_action">选择操作</string>
     <string name="cancel">取消</string>
@@ -147,16 +142,19 @@
     <string name="can_not_delete_cue_file">整轨文件不允许删除单一歌曲</string>
     <string name="share">分享</string>
     <string name="can_not_share_song">这首歌曲无法分享</string>
-    <string name="sleep_timer">定时关闭播放</string>
+    <string name="sleep_timer">播放定时</string>
     <string name="lyrics">歌词</string>
     <string name="always_on">常亮</string>
     <string name="screen_light_on">你已开启了屏幕常亮</string>
     <string name="screen_light_off">你已关闭了屏幕常亮</string>
     <string name="player_axis_enabled">隐藏唱机中轴</string>
     <string name="popcorn_sound">唱盘爆豆音</string>
-    <string name="audio_fx">音效</string>
-    <string name="audio_fx_enabled">启用音效</string>
-    <string name="audio_fx_off">关闭</string>
+    <!-- [1.4.20] 标题统一为「均衡器」：SettingsTitleStack 二级页标题读本项，原先显示「音效」与入口/页内标题不一致。 -->
+    <string name="audio_fx">均衡器</string>
+    <string name="equalizer">均衡器</string>
+    <string name="eq_section_builtin">内置音效</string>
+    <string name="eq_section_v4">耳机预设 · V4</string>
+    <string name="eq_section_autoeq">耳机预设 · AutoEQ</string>
     <string name="audio_fx_curve">频响预览</string>
     <string name="audio_fx_original">原声</string>
     <string name="audio_fx_bass">低音</string>
@@ -170,12 +168,27 @@
     <string name="audio_fx_vocal_summary">中频突出</string>
     <string name="audio_fx_rock_summary">两端提升</string>
     <string name="audio_fx_custom_summary">手动调节</string>
-    <string name="artist_separators">艺术家分隔符</string>
+    <string name="audio_fx_salt_summary">Salt Player 参量均衡 · 源码级预设</string>
+    <string name="audio_fx_direct_note">当前是「系统直读」引擎：播放走系统 MediaPlayer，App 拿不到解码后的 PCM，因此自研音效（30 段均衡、混响、低音）与 USB 独占在本引擎下均无法生效，已置灰。要使用音效请到设置→播放引擎切换到「双路正式版」或「流式解码」。</string>
+    <string name="audio_fx_reverb">混响</string>
+    <string name="audio_fx_reverb_follow">跟随预设</string>
+    <string name="audio_fx_reverb_follow_summary">按所选音效自动匹配</string>
+    <string name="audio_fx_reverb_off">关闭</string>
+    <string name="audio_fx_reverb_off_summary">干声，无空间残响</string>
+    <string name="audio_fx_reverb_weak">弱</string>
+    <string name="audio_fx_reverb_weak_summary">轻微空间感</string>
+    <string name="audio_fx_reverb_medium">中</string>
+    <string name="audio_fx_reverb_medium_summary">自然厅堂感</string>
+    <string name="audio_fx_reverb_strong">强</string>
+    <string name="audio_fx_reverb_strong_summary">悠长尾音</string>
+    <string name="artist_separators">艺人拆分规则</string>
+    <string name="artist_split_rules_summary">合唱 / feat. 曲目按多位艺人归类</string>
     <string name="artist_separators_hint">可同时使用多个分隔符</string>
     <string name="artist_custom_separator_hint">自定义</string>
     <string name="playback_more_primary_line">暂无歌词</string>
     <string name="playback_buffering">正在缓冲</string>
-    <string name="setting_stop_time">设定定时播放时间</string>
+    <string name="playback_converting">正在转换 %1$d%%</string>
+    <string name="setting_stop_time">设定播放定时</string>
     <string name="time_no">无</string>
     <string name="time_15m">15 分钟</string>
     <string name="time_30m">30 分钟</string>
@@ -184,13 +197,13 @@
     <string name="time_2h">2 小时</string>
     <string name="time_countdown">正在倒计时</string>
     <string name="remain_time">剩余时间</string>
-    <string name="sleep_timer_stopped">已关闭定时播放</string>
+    <string name="sleep_timer_stopped">已关闭播放定时</string>
     <string name="library_artist_summary">%1$s，%2$s</string>
     <plurals name="library_playlist_song_count">
         <item quantity="other">%1$d 首歌曲</item>
     </plurals>
     <string name="settings_section_navigation">底部导航栏</string>
-    <string name="bottom_tab_visibility">底栏固定项</string>
+    <string name="bottom_tab_visibility">导航栏固定项</string>
     <string name="bottom_tab_more_locked">固定显示</string>
     <plurals name="bottom_tab_pinned_count">
         <item quantity="other">已固定 %1$d 项</item>
@@ -200,13 +213,198 @@
     </plurals>
     <string name="bottom_tab_layout_summary">%1$s，%2$s</string>
     <string name="navigation_editor_title">拖动图标来更改功能的位置</string>
-    <string name="navigation_editor_open_action">编辑底栏顺序</string>
-    <string name="navigation_editor_bottom_item_description">%1$s，位于底栏</string>
+    <string name="navigation_editor_open_action">编辑导航栏顺序</string>
+    <string name="navigation_editor_bottom_item_description">%1$s，位于导航栏</string>
     <string name="navigation_editor_overflow_item_description">%1$s，位于更多</string>
     <string name="navigation_editor_move_earlier">向前移动</string>
     <string name="navigation_editor_move_later">向后移动</string>
-    <string name="navigation_editor_pin_replacing">固定到底栏并替换末项</string>
+    <string name="navigation_editor_pin_replacing">固定到导航栏并替换末项</string>
     <string name="navigation_editor_unpin_replacing">移到更多并替换首项</string>
     <string name="navigation_editor_item_moved">已移动%1$s</string>
     <string name="navigation_editor_items_swapped">已交换%1$s和%2$s</string>
+    <string name="exclude_dsd">不播放 DSD 格式音频</string>
+    <string name="exclude_dsd_desc_on">已开启：列表里的 DFF / DSF / DSD 等 DSD 格式音频变灰，点击不播放、不进入播放列表，播放到时自动跳下一首。适合只想听普通格式、或 USB 独占下不想等 DSD 转码时使用。</string>
+    <string name="exclude_dsd_desc_off">已关闭：DSD 格式音频正常显示与播放（默认行为，兼容性最好）。</string>
+    <string name="songs_chrome_collapse">收起排序栏</string>
+    <string name="songs_chrome_expand">展开排序栏</string>
+    <string name="dsd_filtered_click_hint">已开启不播放 DSD 格式音频，请在设置项中关闭</string>
+
+    <!-- 1.3.7 界面：沉浸模式开关 -->
+    <string name="immersive_mode">沉浸模式</string>
+    <!-- 1.3.7 界面：色彩主题（默认「彩色」= 保持现状零改动） -->
+    <string name="color_theme">色彩主题</string>
+
+    <!-- 1.4.8 外观：状态栏沉浸开关（开=与顶栏同色；关=安卓黑底+浅色图标，遮罩法） -->
+    <!-- 1.4.9 G-50：A版独占性能优先开关置灰说明 -->
+    <string name="usb_exclusive_perf_priority_locked">系统直读下无效</string>
+    <!-- 1.4.19 S03：新开源 USB 独占地基开关（默认关，实机验证后可开） -->
+    <string name="usb_new_engine">新型 USB 独占引擎</string>
+    <string name="usb_new_engine_desc_on">已开启：使用开源 USB 音频驱动（libusb 用户态，完整解析 DAC 能力、自动适配采样率与位深）。若你的 DAC 不兼容会自动回退到旧引擎。</string>
+    <string name="usb_new_engine_desc_off">已关闭：使用经过长期验证的旧独占引擎。想尝试新引擎可开启本项，并在真机上对比听感。</string>
+    <!-- v15：新引擎开启风险提示 -->
+    <string name="usb_new_engine_risk_title">开启新型 USB 独占引擎</string>
+    <string name="usb_new_engine_risk_message">此引擎为实验功能，部分 USB 解码器上可能出现闪退、杂音、卡顿等问题。确定要开启吗？如遇问题，可回到本页关闭此开关即可恢复。</string>
+    <string name="usb_new_engine_risk_confirm">确定开启</string>
+    <string name="usb_new_engine_risk_cancel">取消</string>
+    <!-- 1.4.19 S07：智能过渡（自动混音） -->
+    <string name="smart_crossfade">智能过渡</string>
+    <string name="smart_crossfade_desc_on">已开启：自动播到结尾时，用 Morvanium 策略（节拍/能量分析）做真双曲交叉淡化；手动点下一首用平滑淡入淡出。开启后主流格式改走 BASS 流式解码（不落磁盘缓存）。</string>
+    <string name="smart_crossfade_desc_off">已关闭：切歌为原来的直接切换。</string>
+    <string name="smart_crossfade_duration">过渡时长</string>
+    <string name="smart_crossfade_duration_value">%1$d 秒</string>
+    <string name="status_bar_immersive">状态栏沉浸</string>
+    <string name="status_bar_immersive_desc_on">已开启：状态栏与顶栏保持同色（沉浸式）。</string>
+    <string name="status_bar_immersive_desc_off">已关闭：状态栏按安卓默认样式变为黑色，图标自动转为浅色。</string>
+    <string name="status_bar_hidden">隐藏状态栏</string>
+    <string name="status_bar_hidden_desc_on">已开启：状态栏完全隐藏，进入全屏；从屏幕顶部下滑可临时唤出。</string>
+    <string name="status_bar_hidden_desc_off">已关闭：状态栏正常显示。</string>
+    <!-- [1.4.24·R36] 专辑页播放栏显示开关 -->
+    <string name="album_play_bar_visible">专辑页播放栏</string>
+    <string name="album_play_bar_visible_desc_on">已开启：专辑页顶部显示「播放全部 / 随机播放」栏。</string>
+    <string name="album_play_bar_visible_desc_off">已关闭：隐藏该栏，专辑列表整体上移，可多显示一行。</string>
+    <string name="notification_custom_layout">通知栏大按钮</string>
+    <string name="notification_custom_layout_desc_on">已开启：上一首 / 播放 / 下一首各占整行三分之一，热区大、好点准；进度条只读，点通知进 App 拖。</string>
+    <string name="notification_custom_layout_desc_off">已关闭：使用系统媒体卡片，按钮 48dp，可在通知栏直接拖动进度。</string>
+    <string name="color_theme_colorful">彩色（默认）</string>
+    <!-- [v18] 繁体字主题名统一改简体：遠→远 蘇→苏 錆→锈 鳩→鸠 -->
+    <string name="color_theme_enshu_nezumi">远州鼠</string>
+    <string name="color_theme_ochikuri">落栗</string>
+    <string name="color_theme_suou">苏芳</string>
+    <string name="color_theme_sekichiku">石竹</string>
+    <string name="color_theme_karegusa">枯草</string>
+    <string name="color_theme_yanagi_baichiku">柳煤竹茶</string>
+    <string name="color_theme_sabi_seiji">锈青磁</string>
+    <string name="color_theme_hatoba_murasaki">鸠羽紫</string>
+    <!-- [v21] 4 个 M3 固化主题：开启 M3 三色后的样式独立成主题，排在原 9 个之后 -->
+    <string name="color_theme_m3_hatoba_murasaki">M3鸠羽紫</string>
+    <string name="color_theme_m3_ochikuri">M3落栗</string>
+    <string name="color_theme_m3_yanagi_baichiku">M3柳煤竹茶</string>
+    <string name="color_theme_m3_suou">M3苏芳</string>
+    <!-- [v24·R17] 5 个新增 M3 固化主题 -->
+    <string name="color_theme_m3_colorful">M3彩色</string>
+    <string name="color_theme_m3_enshu_nezumi">M3远州鼠</string>
+    <string name="color_theme_m3_sekichiku">M3石竹</string>
+    <string name="color_theme_m3_karegusa">M3枯草</string>
+    <string name="color_theme_m3_sabi_seiji">M3锈青磁</string>
+    <!-- [1.4.23·莫奈取色] 独立于色彩主题的开关：跟随系统壁纸动态取色（Google Monet） -->
+    <string name="monet_color">莫奈取色</string>
+    <!-- [v16·莫奈四开关] 主开关 + 背景莫奈化 / 分隔栏莫奈化（依赖主开关）+ 播放栏渐变过渡（独立） -->
+    <string name="monet_background">背景莫奈化</string>
+    <string name="monet_separator">分隔栏莫奈化</string>
+    <string name="monet_playback_transition">播放栏渐变过渡</string>
+    <!-- [v16] 子开关禁用态小字说明（仅「莫奈取色」关闭时显示） -->
+    <string name="monet_sub_switch_hint">需先开启「莫奈取色」</string>
+    <!-- [1.4.29·R125] 空白区统一加深 -->
+    <string name="monet_deep_background">空白区统一加深</string>
+    <string name="monet_deep_background_hint">需先开启「莫奈取色」和「背景莫奈化」</string>
+    <!-- [1.4.24·R23] M3 固定主题下三个莫奈开关置灰的原因，显示在开关左侧、不占额外行高 -->
+    <string name="monet_m3_fixed_hint">M3固定配色下无效</string>
+    <string name="monet_section_title">莫奈取色（实验）</string>
+    <string name="monet_hint">开启后按当前主题色相重新取色；关闭时保留官方原样</string>
+    <!-- [v17·M3 三色] 严格按谷歌官方 HCT 算法重做配色，与「莫奈取色」互斥 -->
+    <string name="m3_theme">M3 三色主题</string>
+    <string name="m3_theme_hint">按谷歌官方 Material 3 算法重做整套配色（实验）</string>
+    <!-- [v20·USB 零损失] bit-perfect 开关与置灰说明、透明降级提示 -->
+    <string name="usb_zero_loss">零损失（Bit-perfect）</string>
+    <string name="usb_zero_loss_hint">开启后 PCM 逐字节直传、不重采样不重编码；需 USB 独占。DAC 支持硬件音量时音量走 DAC、不影响直传，不支持时需系统音量满档。开启时 EQ/压限/混响/响度平衡/爆豆音/打碟音等会禁用</string>
+    <string name="usb_zero_loss_locked">零损失下已禁用</string>
+    <string name="usb_zero_loss_need_usb">需先开 USB 独占</string>
+    <string name="usb_zero_loss_need_engine">系统直读引擎下无效</string>
+    <string name="usb_zero_loss_degraded_title">USB 输出降级提示</string>
+    <string name="usb_output_degraded_summary">已降级系统输出（DAC 不支持当前源）</string>
+    <string name="usb_zero_loss_desc_on">已开启：PCM 逐字节直传，不重采样、不重编码，消除 ±1 LSB 量化。为保住逐字节，EQ/压限/混响/响度平衡/ReplayGain/爆豆音/打碟音会被强制旁路并置灰。DAC 支持硬件音量时，音量走 DAC 芯片、音频字节不动，不影响直传；不支持时需把系统音量拉到满档，否则自动走普通路径（日志会写明原因）。</string>
+    <string name="usb_zero_loss_desc_off">已关闭：恢复普通转换路径（源格式与 DAC 不一致时重采样/重编码），所有音效恢复可用。</string>
+    <string name="search_gray_section">深色模式·搜索图标灰</string>
+    <string name="search_gray_mode0">明亮统一灰</string>
+    <string name="search_gray_mode0_desc">三图标统一亮灰，所有主题都看得清</string>
+    <string name="search_gray_mode1">严格同灰</string>
+    <string name="search_gray_mode1_desc">三图标严格同灰，部分主题放大镜偏暗</string>
+    <string name="search_gray_mode2">自适应清晰灰</string>
+    <string name="search_gray_mode2_desc">放大镜随方块底色自动调亮，始终清晰</string>
+    <!-- [v18] 分隔栏深浅三档（对齐谷歌官方 surfaceContainer 三级色阶，走 HCT 精确取色） -->
+    <!-- [1.4.25·R53] 库页排序栏与播放栏位置对调 -->
+    <string name="sort_play_bar_swap">对调排序栏与播放栏</string>
+    <string name="sort_play_bar_swap_desc_on">已开启：播放栏在上、排序栏在下。</string>
+    <string name="sort_play_bar_swap_desc_off">已关闭：排序栏在上、播放栏在下（默认）。</string>
+    <!-- [1.4.25·R44] 文字滚动总开关 -->
+    <string name="text_marquee">文字滚动显示</string>
+    <string name="text_marquee_desc_on">已开启：文字过长显示不全时自动滚动；关闭时直接裁切。</string>
+    <string name="text_marquee_desc_off">已关闭：文字过长直接裁切，不滚动也不显示省略号。</string>
+    <string name="separator_depth_title">分隔栏深浅</string>
+    <string name="separator_depth0">标准</string>
+    <string name="separator_depth0_desc">谷歌标准色阶，与列表背景有轻微区分</string>
+    <string name="separator_depth1">较深</string>
+    <string name="separator_depth1_desc">加深一档，分组更清晰</string>
+    <string name="separator_depth2">最深</string>
+    <string name="separator_depth2_desc">最深色阶，分组区分最明显</string>
+    <!-- [1.4.25·R58] 分隔栏莫奈化三方案 + 字母色 + 独立开关 -->
+
+    <!-- [v18] 逐元素取色实验开关 -->
+    <string name="per_element_color">逐元素取色（实验）</string>
+    <string name="per_element_color_hint">各元素用自己的原色独立取色，效果仅供参考</string>
+
+    <!-- 1.4.3 开屏 slogan：StartupSplash 使用，左对齐 + 苏芳色名称下方的黑色粗体 -->
+    <string name="splash_slogan">东半球最好用的音乐播放器</string>
+
+    <!-- ===== 1.4.20 P0/P1/P2 音效全家桶（举一反三，全部用户可见可开关）===== -->
+    <string name="eq_section_effects">音效增强</string>
+    <string name="fx_playpause_fade">播放暂停淡入淡出</string>
+    <string name="fx_playpause_fade_on">已开启：起播渐渐响起、暂停前平滑收尾，避免爆豆音。</string>
+    <string name="fx_playpause_fade_off">已关闭：播放/暂停立即切换（个别设备可能有轻微爆音）。</string>
+    <string name="fx_compressor">压限器</string>
+    <string name="fx_compressor_on">已开启：压缩大动态、防止削波，声音更稳。</string>
+    <string name="fx_compressor_off">已关闭：保留原始动态。</string>
+    <string name="fx_compressor_strength">压限强度</string>
+    <string name="fx_compressor_strength_value">%1$d%%</string>
+    <string name="fx_concert_hall">音乐厅</string>
+    <string name="fx_concert_hall_on">已开启：叠加更宽更长的厅堂残响。</string>
+    <string name="fx_concert_hall_off">已关闭：无音乐厅效果。</string>
+    <string name="fx_v3_reverb">V3 增强混响</string>
+    <string name="fx_v3_reverb_on">已开启：多条早期反射 + 悠长尾音的增强混响。</string>
+    <string name="fx_v3_reverb_off">已关闭：仅基础混响。</string>
+    <string name="fx_channel_balance">声道平衡</string>
+    <string name="fx_channel_balance_value">%1$s</string>
+    <string name="fx_channel_balance_center">居中</string>
+    <string name="fx_channel_balance_left">左 %1$d%%</string>
+    <string name="fx_channel_balance_right">右 %1$d%%</string>
+    <string name="fx_replaygain">ReplayGain 响度平衡</string>
+    <string name="fx_replaygain_on">已开启：读取歌曲 ReplayGain 标签，自动拉平不同歌曲的响度。</string>
+    <string name="fx_replaygain_off">已关闭：各曲目按原始响度播放。</string>
+    <string name="fx_replaygain_gain">目标增益</string>
+    <string name="fx_replaygain_gain_value">%1$+d dB</string>
+    <string name="fx_replaygain_fallback">无标签时响度归一化</string>
+    <string name="fx_replaygain_fallback_on">已开启：没有 ReplayGain 标签的歌曲也做响度归一化。</string>
+    <string name="fx_replaygain_fallback_off">已关闭：无标签歌曲保持原响度。</string>
+    <string name="fx_gain_meter">增益可视化</string>
+    <string name="fx_gain_meter_on">已开启：在「音频输出」面板显示实时峰值、数字余量与削波计数。</string>
+    <string name="fx_gain_meter_off">已关闭：不显示实时电平。</string>
+    <string name="fx_reverse">倒放</string>
+    <string name="fx_reverse_on">已开启：当前曲目倒序播放。</string>
+    <string name="fx_reverse_off">已关闭：正常顺序播放。</string>
+    <string name="fx_varispeed">变速播放</string>
+    <string name="fx_varispeed_on">已开启：按下方速度变速不变调播放。</string>
+    <string name="fx_varispeed_off">已关闭：原速播放。</string>
+    <string name="fx_speed">播放速度</string>
+    <string name="fx_speed_value">%1$.2fx</string>
+    <string name="fx_bass_dsp">BASS 音效引擎</string>
+    <string name="fx_bass_dsp_on">已开启：EQ/混响/压限由 BASS_FX 处理（音质更好）。出问题可关闭回退到自研 DSP。</string>
+    <string name="fx_bass_dsp_off">已关闭：使用自研 DSP 处理音效。</string>
+    <!-- 1.4.21 P2：软件音量平滑接力+读回 -->
+    <string name="fx_smooth_volume">音量平滑接力</string>
+    <string name="fx_smooth_volume_on">已开启：拖动音量条或按音量键时平滑过渡，消除跳变爆音，并读回确认生效。</string>
+    <string name="fx_smooth_volume_off">已关闭：音量即时跳变（旧行为）。</string>
+    <string name="gain_vol_handoff">音量接力</string>
+    <string name="gain_vol_handoff_value">目标 %1$d%% → 实际 %2$d%%（%3$s）</string>
+    <string name="gain_vol_handoff_ok">读回一致</string>
+    <string name="gain_vol_handoff_pending">过渡中</string>
+    <string name="gain_vol_handoff_na">未接管</string>
+    <!-- 增益可视化面板行 -->
+    <string name="gain_peak">峰值</string>
+    <string name="gain_headroom">数字余量</string>
+    <string name="gain_rms">RMS 电平</string>
+    <string name="gain_clipped">削波样本</string>
+    <string name="gain_clipped_value">%1$d 个</string>
+    <string name="gain_no_signal">无信号</string>
+    <string name="smart_crossfade_morvanium_note">开启后可体验智能过渡：自动播到结尾时用 Morvanium 策略（节拍/能量分析）做真双曲交叉淡化；手动点下一首用平滑淡入淡出。</string>
+
 </resources>

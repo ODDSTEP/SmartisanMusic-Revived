@@ -1,6 +1,7 @@
 package com.smartisan.music.ui.songs
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -9,6 +10,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
@@ -35,6 +37,10 @@ internal fun SmartisanSwipeDeleteRow(
     onOpenChange: (String?) -> Unit,
     onDelete: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    /** 当前歌曲是否处于隐藏态（睁眼=显示中 / 闭眼=已隐藏，与文件夹页一致） */
+    hidden: Boolean = false,
+    /** 可选的「隐藏」动作：非 null 时滑动露出区会在删除图标右侧多一个眼睛图标 */
+    onHide: (((() -> Unit) -> Unit))? = null,
     onSwipeActivity: (Boolean) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -43,13 +49,20 @@ internal fun SmartisanSwipeDeleteRow(
     val density = LocalDensity.current
     val resources = LocalResources.current
     val deleteImage = rememberSmartisanDrawablePainter(R.drawable.compose_quicktext_delete)
-    val width =
+    val hideEnabled = onHide != null
+    val slot =
         deleteImage.intrinsicSize.width +
             resources.getInteger(R.integer.delete_button_padding_left) * 2
+    val width = slot * if (hideEnabled) 2 else 1
     val shadow = with(density) { dimensionResource(R.dimen.lv_item_shadow_width).roundToPx() }
     val currentOpen by rememberUpdatedState(openKey)
     val openChange by rememberUpdatedState(onOpenChange)
     val activity by rememberUpdatedState(onSwipeActivity)
+    // 眼睛状态与眨眼动画：与文件夹页编辑模式的小眼睛同一套图标与动画
+    var pendingHidden by remember(key) { mutableStateOf<Boolean?>(null) }
+    val eyeTime = remember(key) { Animatable(300f) }
+    LaunchedEffect(hidden) { if (pendingHidden == hidden) pendingHidden = null }
+    val displayedHidden = pendingHidden ?: hidden
     fun close() {
         onOpenChange(null)
         onSwipeActivity(false)
@@ -151,24 +164,76 @@ internal fun SmartisanSwipeDeleteRow(
             val interaction = remember { MutableInteractionSource() }
             val pressed by interaction.collectSmartisanPressedAsState()
             Box(Modifier.matchParentSize()) {
-                Image(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.remove_playlist_selector,
-                        pressed = pressed,
-                    ),
-                    stringResource(R.string.delete),
+                Row(
                     Modifier.align(androidx.compose.ui.AbsoluteAlignment.CenterLeft)
                         .width(with(density) { width.toDp() })
-                        .fillMaxHeight()
-                        .clickable(
-                            interaction,
-                            null,
-                            enabled = openKey == key,
-                            role = Role.Button,
-                            onClick = smartisanClick { onDelete(::close) },
-                        ),
-                    contentScale = androidx.compose.ui.layout.ContentScale.None,
-                )
+                        .fillMaxHeight(),
+                ) {
+                    Box(
+                        Modifier.width(with(density) { slot.toDp() })
+                            .fillMaxHeight()
+                            .clickable(
+                                interaction,
+                                null,
+                                enabled = openKey == key,
+                                role = Role.Button,
+                                onClick = smartisanClick { onDelete(::close) },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            rememberSmartisanDrawablePainter(
+                                R.drawable.remove_playlist_selector,
+                                pressed = pressed,
+                            ),
+                            stringResource(R.string.delete),
+                        )
+                    }
+                    if (hideEnabled) {
+                        // 状态眼睛与文件夹页同一套图标与动画：显示中=睁眼(0001)，已隐藏=闭眼(0016)；
+                        // 点击后播放 16 帧眨眼过渡动画（隐藏：睁→闭；显示：闭→睁），动画结束才执行切换
+                        val eyeFrame =
+                            if (pendingHidden != null && eyeTime.value < 160f) {
+                                val index = (eyeTime.value / 10).toInt().coerceIn(0, 15)
+                                SongEyeFrames[if (pendingHidden == true) index else 15 - index]
+                            } else if (displayedHidden) R.drawable.eye_icon_0016
+                            else R.drawable.eye_icon_0001
+                        Box(
+                            Modifier.width(with(density) { slot.toDp() })
+                                .fillMaxHeight()
+                                .clickable(
+                                    interaction,
+                                    null,
+                                    enabled = openKey == key && pendingHidden == null,
+                                    role = Role.Button,
+                                    onClick = smartisanClick {
+                                        pendingHidden = !displayedHidden
+                                        scope.launch {
+                                            eyeTime.snapTo(0f)
+                                            eyeTime.animateTo(
+                                                300f,
+                                                tween(300, easing = LinearEasing),
+                                            )
+                                            onHide?.invoke(::close)
+                                        }
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                rememberSmartisanDrawablePainter(
+                                    eyeFrame,
+                                    pressed = pressed,
+                                ),
+                                stringResource(R.string.show_hide_songs),
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                                    com.smartisan.music.ui.components.StatefulIconTint,
+                                    androidx.compose.ui.graphics.BlendMode.SrcIn,
+                                ),
+                            )
+                        }
+                    }
+                }
             }
         }
         Box(
@@ -188,3 +253,24 @@ internal fun SmartisanSwipeDeleteRow(
         }
     }
 }
+
+/** 眨眼动画帧（睁眼 0001 → 闭眼 0016），与文件夹页的眼睛动画共用同一组图标资源 */
+internal val SongEyeFrames =
+    intArrayOf(
+        R.drawable.eye_icon_0001,
+        R.drawable.eye_icon_0002,
+        R.drawable.eye_icon_0003,
+        R.drawable.eye_icon_0004,
+        R.drawable.eye_icon_0005,
+        R.drawable.eye_icon_0006,
+        R.drawable.eye_icon_0007,
+        R.drawable.eye_icon_0008,
+        R.drawable.eye_icon_0009,
+        R.drawable.eye_icon_0010,
+        R.drawable.eye_icon_0011,
+        R.drawable.eye_icon_0012,
+        R.drawable.eye_icon_0013,
+        R.drawable.eye_icon_0014,
+        R.drawable.eye_icon_0015,
+        R.drawable.eye_icon_0016,
+    )

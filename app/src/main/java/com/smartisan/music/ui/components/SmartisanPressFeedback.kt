@@ -53,7 +53,11 @@ internal fun InteractionSource.collectSmartisanPressedAsState(): State<Boolean> 
     return pressed
 }
 
-/** Original blue list selectors pair the pressed background with white text. */
+/**
+ * 原蓝色列表选择器是「按下深蓝底 + 白字」。
+ * 1.3.8：非默认主题下高亮条换成组 1 主题色背景，文字仍是浅色档、只换色相；
+ * 默认「彩色」逐字沿用原来的白色高亮文字。
+ */
 @Composable
 internal fun smartisanPressedTextColor(normalColor: Color, pressed: Boolean): Color =
-    if (pressed) colorResource(R.color.setting_item_text_color_highlight) else normalColor
+    com.smartisan.music.ui.theme.themedPressedTextColor(normalColor, pressed)

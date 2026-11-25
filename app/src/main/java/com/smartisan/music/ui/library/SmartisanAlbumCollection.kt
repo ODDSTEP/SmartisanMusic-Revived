@@ -1,5 +1,7 @@
 package com.smartisan.music.ui.library
 
+import com.smartisan.music.ui.library.libraryTexture
+import com.smartisan.music.ui.theme.themedAccent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -45,10 +47,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import com.smartisan.music.R
+import com.smartisan.music.ui.songs.AlphabetQuickBar
 import com.smartisan.music.ui.album.AlbumSummary
 import com.smartisan.music.ui.album.AlbumViewMode
 import com.smartisan.music.ui.artwork.AlbumArtworkLoader
+import com.smartisan.music.ui.components.SectionLetterHeader
+import com.smartisan.music.ui.components.SectionLetterRow
+import com.smartisan.music.ui.components.buildSectionLetterRows
 import com.smartisan.music.ui.components.collectSmartisanPressedAsState
+import com.smartisan.music.ui.components.headerIndices
 import com.smartisan.music.ui.components.rememberSmartisanDrawablePainter
 import com.smartisan.music.ui.components.smartisanCheckboxBounds
 import com.smartisan.music.ui.components.smartisanCheckboxHit
@@ -56,6 +63,8 @@ import com.smartisan.music.ui.components.smartisanClick
 import com.smartisan.music.ui.components.smartisanSlideSelection
 import com.smartisan.music.ui.components.smartisanVerticalScrollbar
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import com.smartisan.music.ui.components.smartisanMarquee
 
 internal data class LibraryAlbumEntry(
     val id: String,
@@ -87,11 +96,14 @@ internal fun SmartisanAlbumCollection(
     val entrance =
         remember(animateInitialAppearance) { AlbumCollectionEntrance(animateInitialAppearance) }
     val entryIds = remember(entries) { entries.map { it.id } }
+    // 列表视图按首字母分组（拼音、'#' 置尾）；网格视图仍直接使用 entries。
+    val sectionRows = remember(entries) { buildSectionLetterRows(entries) { it.title } }
+    val sectionIndices = remember(sectionRows) { sectionRows.headerIndices() }
     LaunchedEffect(active, viewMode, entryIds, entrance) {
         if (entrance.phase == AlbumEntrancePhase.Complete || !active || entryIds.isEmpty())
             return@LaunchedEffect
         val keys = entryIds.toSet()
-        val visibleIds = snapshotFlow {
+        val visibleFlow = snapshotFlow {
             if (viewMode == AlbumViewMode.Tile) {
                 grid.layoutInfo.visibleItemsInfo
                     .map { it.key }
@@ -101,11 +113,19 @@ internal fun SmartisanAlbumCollection(
                 list.layoutInfo.visibleItemsInfo
                     .map { it.key }
                     .filterIsInstance<String>()
+                    // 列表视图的 item key 是 "album:${id}"（见下方 itemsIndexed 的 key），
+                    // 必须去掉前缀才能与裸 entryIds 匹配；否则 visibleIds 永远为空，
+                    // reveal() 永不触发，Waiting 态 alpha=0 → 专辑列表整片空白。
+                    .map { it.removePrefix("album:") }
                     .filter { it in keys }
             }
         }
-            .first { it.isNotEmpty() }
-        entrance.reveal(visibleIds, viewMode)
+        // [v13·专辑空白兜底] 无论可见项收集因何种时序异常一直为空（如 key 变化、
+        // 快速进出页面），最多等 600ms 就放弃入场动画、直接 finish 让所有条目可见，
+        // 绝不让 Waiting 态 alpha=0 永久停在屏幕上。正常情况首帧即可拿到 visibleIds。
+        val resolved = withTimeoutOrNull(600L) { visibleFlow.first { it.isNotEmpty() } }
+        if (resolved != null) entrance.reveal(resolved, viewMode)
+        else entrance.finish()
     }
     var displayedMode by remember { mutableStateOf(viewMode) }
     val modeTransition = updateTransition(displayedMode, label = "album layout")
@@ -129,7 +149,13 @@ internal fun SmartisanAlbumCollection(
                 if (displayedMode == AlbumViewMode.List) {
                     list.firstVisibleItemIndex
                 } else grid.firstVisibleItemIndex
-            val anchor = entries.indexOfFirst { it.id == source }.takeIf { it >= 0 } ?: fallback
+            val anchor =
+                (if (displayedMode == AlbumViewMode.List)
+                    sectionRows.indexOfFirst {
+                        it is SectionLetterRow.Item && it.value.id == source
+                    }
+                else entries.indexOfFirst { it.id == source })
+                    .takeIf { it >= 0 } ?: fallback
             val index = anchor.coerceIn(0, (entries.size - 1).coerceAtLeast(0))
             // Both layouts coexist during motion. Only position a fresh destination;
             // reversing in flight must preserve its already measured bounds.
@@ -147,7 +173,7 @@ internal fun SmartisanAlbumCollection(
         }
 
     SharedTransitionLayout(
-        modifier.fillMaxSize().clipToBounds().background(colorResource(R.color.page_background))
+        modifier.fillMaxSize().clipToBounds().libraryTexture()
     ) {
         if (!active) return@SharedTransitionLayout
         val sharedScope = this
@@ -207,7 +233,7 @@ internal fun SmartisanAlbumCollection(
                                         }
                                         ?.index
                                 },
-                                keyAt = { entries.getOrNull(it)?.id },
+                                keyAt = { (sectionRows.getOrNull(it) as? SectionLetterRow.Item)?.value?.id },
                                 selectedKeys = selectedIds,
                                 onSelectionChange = onSelectionChange,
                                 canStart = { point ->
@@ -218,7 +244,11 @@ internal fun SmartisanAlbumCollection(
                                                     point.y < it.offset + it.size
                                             }
                                             ?.index
-                                    val key = index?.let { entries.getOrNull(it)?.id }
+                                    val key =
+                                        index?.let {
+                                            (sectionRows.getOrNull(it) as? SectionLetterRow.Item)
+                                                ?.value?.id
+                                        }
                                     smartisanCheckboxHit(
                                         point + listOrigin,
                                         key?.let { checkboxBounds[it] },
@@ -228,7 +258,10 @@ internal fun SmartisanAlbumCollection(
                                 scrollBy = { list.scrollBy(it) },
                                 edgeItemAt = { top ->
                                     list.layoutInfo.visibleItemsInfo
-                                        .filter { it.index in entries.indices }
+                                        .filter {
+                                            it.index in sectionRows.indices &&
+                                                sectionRows[it.index] is SectionLetterRow.Item
+                                        }
                                         .let {
                                             if (top) it.firstOrNull()?.index
                                             else it.lastOrNull()?.index
@@ -236,32 +269,42 @@ internal fun SmartisanAlbumCollection(
                                 },
                             ),
                 ) {
-                    itemsIndexed(entries, key = { _, item -> item.id }) { index, item ->
-                        LibraryAlbumListRow(
-                            item,
-                            loader,
-                            editMode,
-                            item.id in selectedIds,
-                            item.songs.any { it.mediaId == currentMediaId },
-                            artistAlbums,
-                            coverModifier = coverMotion(item.id, index),
-                            modifier =
-                                Modifier.animateEnterExit(
-                                        enter = fadeIn(tween(150)),
-                                        exit = fadeOut(tween(90)),
-                                    )
-                                    .albumCollectionEntrance(entrance, item.id),
-                            onCheckboxBounds = { bounds ->
-                                if (bounds == null) checkboxBounds.remove(item.id)
-                                else checkboxBounds[item.id] = bounds
-                            },
-                            onClick = {
-                                if (!interactive) return@LibraryAlbumListRow
-                                if (editMode) onSelectionChange(item.id, item.id !in selectedIds)
-                                else onClick(item)
-                            },
-                        )
-                        LibraryDivider()
+                    itemsIndexed(
+                        sectionRows,
+                        key = { _, row ->
+                            when (row) {
+                                is SectionLetterRow.Header -> "header:${row.letter}"
+                                is SectionLetterRow.Item -> "album:${row.value.id}"
+                            }
+                        },
+                    ) { index, row ->
+                        when (row) {
+                            is SectionLetterRow.Header -> SectionLetterHeader(row.letter)
+                            is SectionLetterRow.Item -> {
+                                val item = row.value
+                                LibraryAlbumListRow(
+                                    item,
+                                    loader,
+                                    editMode,
+                                    item.id in selectedIds,
+                                    item.songs.any { it.mediaId == currentMediaId },
+                                    artistAlbums,
+                                    coverModifier = coverMotion(item.id, index),
+                                    modifier = Modifier.albumCollectionEntrance(entrance, item.id),
+                                    onCheckboxBounds = { bounds ->
+                                        if (bounds == null) checkboxBounds.remove(item.id)
+                                        else checkboxBounds[item.id] = bounds
+                                    },
+                                    onClick = {
+                                        if (!interactive) return@LibraryAlbumListRow
+                                        if (editMode)
+                                            onSelectionChange(item.id, item.id !in selectedIds)
+                                        else onClick(item)
+                                    },
+                                )
+                                LibraryDivider()
+                            }
+                        }
                     }
                     if (footer != null) item(key = "album-footer") { footer() }
                 }
@@ -332,19 +375,7 @@ internal fun SmartisanAlbumCollection(
                             item.id in selectedIds,
                             item.songs.any { it.mediaId == currentMediaId },
                             coverModifier = coverMotion(item.id, index),
-                            modifier =
-                                Modifier.animateEnterExit(
-                                        enter =
-                                            fadeIn(
-                                                tween(
-                                                    300,
-                                                    delayMillis =
-                                                        (index - firstIndex).coerceIn(0, 20) * 40,
-                                                )
-                                            ),
-                                        exit = fadeOut(tween(150)),
-                                    )
-                                    .albumCollectionEntrance(entrance, item.id),
+                            modifier = Modifier.albumCollectionEntrance(entrance, item.id),
                             onClick = {
                                 if (!interactive) return@LibraryAlbumTile
                                 if (editMode) onSelectionChange(item.id, item.id !in selectedIds)
@@ -355,7 +386,17 @@ internal fun SmartisanAlbumCollection(
                 }
             }
         }
-    }
+    
+        // 1.3.4：专辑页复用歌曲页右侧字母栏，定位到首字母 Header 行
+        if (displayedMode == AlbumViewMode.List && entries.size > 30) {
+            AlphabetQuickBar(
+                labelCount = entries.size,
+                headerIndices = sectionIndices,
+                listState = list,
+                scope = androidx.compose.runtime.rememberCoroutineScope(),
+            )
+        }
+}
 }
 
 @Composable
@@ -388,7 +429,8 @@ private fun LibraryAlbumListRow(
         modifier = modifier.semantics { if (editMode) this.selected = selected },
         selected = editMode && selected,
         titleColor =
-            colorResource(if (playing) R.color.playing_red else R.color.setting_item_text_color),
+            if (playing) themedAccent(colorResource(R.color.playing_red))
+            else colorResource(R.color.setting_item_text_color),
         leadingContent = {
             Box(Modifier.width(editWidth).clipToBounds(), contentAlignment = Alignment.CenterEnd) {
                 if (editWidth > 0.dp) {
@@ -469,17 +511,19 @@ private fun LibraryAlbumTile(
         }
         BasicText(
             item.title,
-            Modifier.width(tileSize),
+            // [1.4.25·R44] 网格里的专辑名超宽滚动，不省略。
+            Modifier.width(tileSize).smartisanMarquee(),
             style =
                 TextStyle(
                     color =
-                        colorResource(if (playing) R.color.playing_red else R.color.text_emphasis),
+                        if (playing) themedAccent(colorResource(R.color.playing_red))
+                        else colorResource(R.color.text_emphasis),
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     platformStyle = PlatformTextStyle(includeFontPadding = true),
                 ),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Clip,
         )
     }
 }

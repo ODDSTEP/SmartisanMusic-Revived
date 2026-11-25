@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.media3.common.MediaItem
 import com.smartisan.music.R
 import com.smartisan.music.data.settings.ArtistSettings
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.album.AlbumDetailPage
 import com.smartisan.music.ui.album.AlbumViewMode
 import com.smartisan.music.ui.album.buildAlbumSummaries
@@ -111,6 +112,7 @@ internal fun SearchOverlay(
     onRequestAddToPlaylist: (List<MediaItem>) -> Unit,
     onRequestAddToQueue: (List<MediaItem>) -> Unit,
     onTrackMoreClick: (MediaItem) -> Unit,
+    onTrackLocateClick: (MediaItem) -> Unit,
     onDrilldownTargetChanged: (SearchDrilldownTarget?) -> Unit,
     onAlbumClick: (String, String) -> Unit,
     onArtistClick: (String, String) -> Unit,
@@ -152,9 +154,11 @@ internal fun SearchOverlay(
                 GlobalSearchScreen(
                     query = query,
                     libraryRefreshVersion = libraryRefreshVersion,
+                    hiddenMediaIds = hiddenMediaIds,
                     onQueryChange = onQueryChange,
                     onDismiss = onDismiss,
                     onOpenPlayback = onOpenPlayback,
+                    onTrackLocateClick = onTrackLocateClick,
                     onAlbumClick = onAlbumClick,
                     onArtistClick = onArtistClick,
                     artistSettings = artistSettings,
@@ -234,7 +238,7 @@ private fun SearchDrilldownPage(
     val titleAreaHeight =
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + titleContentHeight
 
-    Column(modifier = modifier.background(colorResource(R.color.page_background))) {
+    Column(modifier = modifier.libraryTexture()) {
         when (target) {
             is SearchDrilldownTarget.Album -> {
                 val album =
@@ -262,7 +266,7 @@ private fun SearchDrilldownPage(
                         modifier =
                             Modifier.fillMaxWidth()
                                 .weight(1f)
-                                .background(colorResource(R.color.page_background))
+                                .libraryTexture()
                     )
                 }
             }

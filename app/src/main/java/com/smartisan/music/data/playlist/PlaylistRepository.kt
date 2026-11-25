@@ -124,7 +124,10 @@ class PlaylistRepository private constructor(
         if (playlistIds.isEmpty()) {
             return
         }
-        playlistDao.deletePlaylists(playlistIds)
+        // 1.2.26：SQLite 绑定变量上限（Android 11 之前 999），批量删除分块
+        playlistIds.chunked(SqliteChunkSize).forEach { chunk ->
+            playlistDao.deletePlaylists(chunk.toSet())
+        }
     }
 
     suspend fun addMediaIds(
@@ -184,10 +187,13 @@ class PlaylistRepository private constructor(
         }
 
         return database.withTransaction {
-            playlistDao.getPlaylistIdsContainingMediaIds(normalizedMediaIds)
+            normalizedMediaIds
+                .chunked(SqliteChunkSize)
+                .flatMap { chunk -> playlistDao.getPlaylistIdsContainingMediaIds(chunk.toSet()) }
+                .distinct()
                 .sumOf { playlistId ->
                     removeMediaIdsFromPlaylistLocked(playlistId, normalizedMediaIds)
-            }
+                }
         }
     }
 
@@ -318,3 +324,6 @@ internal fun reorderVisiblePlaylistEntries(
         )
     }
 }
+
+/** SQLite 绑定变量上限（Android 11 之前 999），统一按 500 分块。 */
+private const val SqliteChunkSize = 500

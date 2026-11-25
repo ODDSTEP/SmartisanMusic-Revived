@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartisan.music.R
+import com.smartisan.music.ui.library.cardTextureMonet
 import com.smartisan.music.ui.components.*
 import kotlinx.coroutines.delay
 
@@ -71,11 +72,7 @@ internal fun PlaylistNameDialogOverlay(
             }
             Column(
                 Modifier.fillMaxWidth()
-                    .smartisanPainterBackground(
-                        rememberSmartisanDrawablePainter(
-                            R.drawable.revone_global_dialog_shape_background
-                        )
-                    )
+                    .cardTextureMonet(R.drawable.revone_global_dialog_shape_background)
             ) {
                 Box(
                     Modifier.fillMaxWidth()
@@ -95,11 +92,7 @@ internal fun PlaylistNameDialogOverlay(
                 }
                 Box(
                     Modifier.fillMaxWidth()
-                        .smartisanPainterBackground(
-                            rememberSmartisanDrawablePainter(
-                                R.drawable.revone_global_dialog_message_background
-                            )
-                        )
+                        .cardTextureMonet(R.drawable.revone_global_dialog_message_background)
                         .padding(18.dp)
                 ) {
                     Row(

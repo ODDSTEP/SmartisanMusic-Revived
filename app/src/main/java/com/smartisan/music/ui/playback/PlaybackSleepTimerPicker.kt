@@ -47,6 +47,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.smartisan.music.ui.theme.currentThemePalette
 
 /** The five-row wheel uses Android spline decay on Compose's cancellable animation clock. */
 @Composable
@@ -65,7 +66,16 @@ internal fun PlaybackSleepTimerPicker(
     val scope = rememberCoroutineScope()
     val callback = rememberUpdatedState(onValueChanged)
     val normalColor = resources.getColor(R.color.menu_text_color, context.theme)
-    val selectedColor = resources.getColor(R.color.btn_text_color_blue, context.theme)
+    // 1.3.8：非默认主题下滚轮选中文字用组 2 主题色（手动组 ARGB，避免额外依赖）
+    val palette = currentThemePalette()
+    val selectedColor =
+        palette?.let {
+            val c = it.ink
+            (0xFF shl 24) or
+                ((c.red * 255f).toInt().coerceIn(0, 255) shl 16) or
+                ((c.green * 255f).toInt().coerceIn(0, 255) shl 8) or
+                (c.blue * 255f).toInt().coerceIn(0, 255)
+        } ?: resources.getColor(R.color.btn_text_color_blue, context.theme)
     val normalSize = resources.getDimensionPixelSize(R.dimen.time_picker_text_size).toFloat()
     val selectedSize =
         resources.getDimensionPixelSize(R.dimen.time_picker_text_size_hight).toFloat()

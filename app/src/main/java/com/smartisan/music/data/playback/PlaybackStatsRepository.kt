@@ -2,6 +2,8 @@ package com.smartisan.music.data.playback
 
 import android.content.Context
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 data class PlaybackStatsRecord(
     val playCount: Long,
@@ -33,6 +35,16 @@ class PlaybackStatsRepository private constructor(
             .toList()
             .toStatsMap()
     }
+
+    /**
+     * 全量播放次数实时流（mediaId → playCount）。
+     * 1.2.23：歌曲页据此显示/排序「实时」播放次数，与「理解记忆」同源（均落 Room playback_stats），
+     * 不再依赖扫描时写入 MediaItem extras 的静态快照，从而一点击即 +1 并即时刷新。
+     */
+    val statsFlow: Flow<Map<String, Long>> =
+        playbackStatsDao.observeStats().map { rows ->
+            rows.associate { it.mediaId to it.playCount }
+        }
 
     suspend fun incrementPlayCount(
         mediaId: String,

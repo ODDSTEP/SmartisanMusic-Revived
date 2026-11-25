@@ -2,7 +2,6 @@ package com.smartisan.music.ui.album
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -26,6 +25,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.smartisan.music.ui.theme.monetContentBackground
 import androidx.compose.ui.unit.toSize
 import androidx.media3.common.MediaItem
 import com.smartisan.music.R
@@ -50,6 +50,7 @@ import com.smartisan.music.ui.library.SmartisanAlbumTrackRow
 import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.library.rememberAlbumArtworkLoader
 import com.smartisan.music.ui.songs.rememberSongPlaybackState
+import com.smartisan.music.ui.components.smartisanMarquee
 
 @Composable
 internal fun AlbumDetailPage(
@@ -94,7 +95,7 @@ internal fun AlbumDetailPage(
                 SmartisanAlbumTrackRow(
                     item = item,
                     playback = playback,
-                    onClick = { browser.replaceQueueAndPlay(album.songs, index) },
+                    onClick = { browser.replaceQueueAndPlay(album.songs, index, keepShuffle = true) },
                     onMoreClick = onTrackMoreClick,
                     trackNumber = item.displayTrackNumber(),
                     showArtist = showArtists,
@@ -165,7 +166,7 @@ private fun AlbumDetailHeader(
                 AlbumHeaderText(
                     album.title,
                     R.dimen.album_detail_album_name_size,
-                    Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                    Modifier.smartisanMarquee(),
                 )
                 AlbumHeaderText(
                     album.artist,
@@ -207,10 +208,16 @@ private fun AlbumDetailHeader(
             }
         }
         LibraryDivider()
+        // 1.2.33：撤销 1.2.32 误加的 zIndex+offset 投影。这里 AlbumDetailHeader 是
+        // LazyColumn 的一个 item（随列表滚动），把阴影 offset 到 item 边界外会被后续
+        // 列表项覆盖，实际根本显示不出来 —— 是无效死代码。用户图3 指的是「专辑 Tab
+        // 列表页」AlbumPage.kt，不是本详情页，分界已在 AlbumPage 用公共 LibraryTopCard
+        // 正确实现。此处恢复 1.2.25 的干净结构。
         Row(
             Modifier.fillMaxWidth()
                 .height(45.dp)
-                .background(colorResource(R.color.page_background)),
+                // [1.4.29·R123] 详情页播放栏跟页面底同一套，不再一条纯灰。
+                .monetContentBackground(colorResource(R.color.page_background)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AlbumHeaderAction(
@@ -243,7 +250,8 @@ private fun AlbumDetailHeader(
 private fun AlbumHeaderText(text: String, size: Int, modifier: Modifier = Modifier) {
     BasicText(
         text,
-        modifier.fillMaxWidth(),
+        // [1.4.25·R44] 专辑名超宽滚动，不省略。
+        modifier.fillMaxWidth().smartisanMarquee(),
         style =
             TextStyle(
                 color = colorResource(R.color.title_text_color),
@@ -251,7 +259,7 @@ private fun AlbumHeaderText(text: String, size: Int, modifier: Modifier = Modifi
                 platformStyle = PlatformTextStyle(includeFontPadding = true),
             ),
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        overflow = TextOverflow.Clip,
     )
 }
 

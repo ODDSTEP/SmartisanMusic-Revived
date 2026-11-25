@@ -46,7 +46,9 @@ internal fun SettingsTitleStack(
                             SettingsSecondaryPage.AudioFx -> R.string.audio_fx
                             SettingsSecondaryPage.Navigation -> R.string.bottom_tab_visibility
                             SettingsSecondaryPage.Theme -> R.string.theme_settings
-                            SettingsSecondaryPage.AppIcon -> R.string.app_icon
+                            SettingsSecondaryPage.ColorTheme -> R.string.color_theme
+                            SettingsSecondaryPage.Memory -> R.string.memory
+                            SettingsSecondaryPage.Engine -> R.string.playback_engine
                         }
                     ),
                     navigationIcon =

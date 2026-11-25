@@ -81,7 +81,10 @@ class FavoriteSongsRepository private constructor(
         if (normalizedMediaIds.isEmpty()) {
             return
         }
-        favoriteSongDao.deleteByIds(normalizedMediaIds)
+        // 1.2.26：SQLite 绑定变量上限（Android 11 之前 999），大库批量删除必须分块
+        normalizedMediaIds.chunked(SqliteChunkSize).forEach { chunk ->
+            favoriteSongDao.deleteByIds(chunk.toSet())
+        }
     }
 
     suspend fun toggle(mediaId: String, likedAt: Long = System.currentTimeMillis()): Boolean {
@@ -89,18 +92,8 @@ class FavoriteSongsRepository private constructor(
         if (normalizedMediaId.isEmpty()) {
             return false
         }
-        return if (favoriteSongDao.exists(normalizedMediaId)) {
-            favoriteSongDao.deleteById(normalizedMediaId)
-            false
-        } else {
-            favoriteSongDao.upsert(
-                FavoriteSongEntity(
-                    mediaId = normalizedMediaId,
-                    likedAt = likedAt,
-                ),
-            )
-            true
-        }
+        // 1.2.26：读-改-写走同一事务，避免连点两次被并发读成「两次都未收藏」
+        return favoriteSongDao.toggleInTransaction(normalizedMediaId, likedAt)
     }
 
     suspend fun exists(mediaId: String): Boolean {
@@ -128,3 +121,6 @@ class FavoriteSongsRepository private constructor(
         }
     }
 }
+
+/** SQLite 绑定变量上限（Android 11 之前 999），统一按 500 分块。 */
+private const val SqliteChunkSize = 500

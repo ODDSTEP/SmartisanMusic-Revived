@@ -35,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.smartisan.music.R
 import com.smartisan.music.data.settings.ThemeMode
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.components.collectSmartisanPressedAsState
 import com.smartisan.music.ui.components.SmartisanTitleBar
 import com.smartisan.music.ui.components.SmartisanTitleBarAction
@@ -54,7 +55,7 @@ internal fun ThemeSettingsPage(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
-    Column(modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background))) {
+    Column(modifier = modifier.fillMaxSize().libraryTexture(pageDeep = true)) {
         if (active) {
             SmartisanTitleBar(
                 title = stringResource(R.string.theme_settings),
@@ -69,10 +70,7 @@ internal fun ThemeSettingsPage(
                 modifier =
                     Modifier.fillMaxWidth()
                         .weight(1f)
-                        .smartisanPainterBackground(
-                            painter =
-                                rememberSmartisanDrawablePainter(R.drawable.account_background)
-                        )
+                        .libraryTexture(pageDeep = true)
                         .verticalScroll(scrollState)
                         .padding(
                             horizontal = dimensionResource(R.dimen.list_item_left_right_margin),

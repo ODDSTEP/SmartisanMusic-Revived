@@ -2,6 +2,7 @@ package com.smartisan.music.ui.search
 
 import androidx.media3.common.MediaItem
 import com.smartisan.music.data.settings.ArtistSettings
+import com.smartisan.music.playback.LocalAudioLibrary
 import com.smartisan.music.ui.album.AlbumSummary
 import com.smartisan.music.ui.album.buildAlbumSummaries
 import com.smartisan.music.ui.artist.ArtistSummary
@@ -79,13 +80,31 @@ internal fun normalizeSearchQuery(query: String): String {
 
 private fun MediaItem.searchableSongFields(): List<String> {
     val metadata = mediaMetadata
-    return listOfNotNull(
-        metadata.title?.toString(),
-        metadata.displayTitle?.toString(),
-        metadata.artist?.toString(),
-        metadata.albumTitle?.toString(),
-        metadata.albumArtist?.toString(),
-    ).map(::normalizeSearchQuery)
+    val extras = metadata.extras
+    val displayName = extras?.getString(LocalAudioLibrary.DisplayNameExtraKey)
+    val relativePath = extras?.getString(LocalAudioLibrary.RelativePathExtraKey)
+    return buildList {
+        add(metadata.title?.toString())
+        add(metadata.displayTitle?.toString())
+        add(metadata.artist?.toString())
+        add(metadata.albumTitle?.toString())
+        add(metadata.albumArtist?.toString())
+        // 文件名（含后缀）与后缀单独可搜：搜 "ape" 列出全部 APE、搜文件名也能命中
+        add(displayName)
+        displayName?.substringBeforeLast('.')?.takeIf { it != displayName }?.let(::add)
+        displayName?.substringAfterLast('.', "")?.takeIf { it.isNotBlank() }?.let(::add)
+        // 1.2.19：容器/编码/音质档位也参与匹配——搜 "dff" 列出全部 DFF、
+        // 搜 "dsd" 列出全部 DSD（此前只能靠文件名后缀，补录行拿不到后缀时就搜不到）
+        add(extras?.getString(LocalAudioLibrary.FormatExtraKey))
+        add(extras?.getString(LocalAudioLibrary.MimeTypeExtraKey))
+        add(extras?.getString(LocalAudioLibrary.AudioQualityBadgeExtraKey))
+        add(
+            extras?.getString(LocalAudioLibrary.FormatExtraKey)
+                ?.substringAfter('/', "")
+                ?.takeIf { it.isNotBlank() }
+        )
+        add(relativePath)
+    }.filterNotNull().map(::normalizeSearchQuery)
 }
 
 private fun AlbumSummary.searchableAlbumFields(

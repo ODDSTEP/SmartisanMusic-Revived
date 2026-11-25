@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.smartisan.music.R
+import com.smartisan.music.ui.theme.currentThemePalette
+import com.smartisan.music.ui.theme.tintImageBitmap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -188,7 +190,16 @@ internal fun SmartisanSwitch(
     enabled: Boolean = true,
     state: SmartisanSwitchState = rememberSmartisanSwitchState(checked, enabled, onCheckedChange),
 ) {
-    val bottom = ImageBitmap.imageResource(R.drawable.switch_ex_bottom)
+    // 1.3.8：开关开启后右侧的「蓝色小圆点」其实画在 switch_ex_bottom 位图里。
+    // 非默认主题下按组 2 深度换掉蓝点色相，其余灰/白滑块细节与开关动画完全不动。
+    val bottomBase = ImageBitmap.imageResource(R.drawable.switch_ex_bottom)
+    val palette = currentThemePalette()
+    val bottom =
+        if (palette == null) bottomBase
+        else
+            remember(bottomBase, palette) {
+                tintImageBitmap(bottomBase, palette.ink, blueOnly = true)
+            }
     val mask = ImageBitmap.imageResource(R.drawable.switch_ex_mask)
     val frame = ImageBitmap.imageResource(R.drawable.switch_ex_frame)
     val framePressed = ImageBitmap.imageResource(R.drawable.switch_ex_frame_pressed)

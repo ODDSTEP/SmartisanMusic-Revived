@@ -36,6 +36,7 @@ internal data class LibraryIndexEntity(
     val relativePath: String,
     val displayName: String,
     val mimeType: String?,
+    val fileSize: Long?,
     val dateAdded: Long?,
     val dateModified: Long?,
     val generationAdded: Long?,
@@ -94,9 +95,15 @@ internal interface LibraryIndexDao {
     fun deleteAllIndexes()
 }
 
+private val Migration1To2 = object : androidx.room.migration.Migration(1, 2) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE library_index ADD COLUMN fileSize INTEGER")
+    }
+}
+
 @Database(
     entities = [LibraryIndexEntity::class, LibraryIndexSnapshotEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 internal abstract class LibraryIndexDatabase : RoomDatabase() {
@@ -113,6 +120,7 @@ internal abstract class LibraryIndexDatabase : RoomDatabase() {
                     LibraryIndexDatabase::class.java,
                     "library_index.db",
                 )
+                    .addMigrations(Migration1To2)
                     .build()
                     .also { instance = it }
             }

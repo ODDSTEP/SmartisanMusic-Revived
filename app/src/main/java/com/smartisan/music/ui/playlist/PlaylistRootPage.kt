@@ -31,12 +31,15 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.smartisan.music.R
 import com.smartisan.music.data.playlist.UserPlaylistSummary
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.components.*
 import com.smartisan.music.ui.library.LibraryBlank
 import com.smartisan.music.ui.library.LibraryDivider
 import com.smartisan.music.ui.library.LibraryFooter
 import com.smartisan.music.ui.library.libraryListEntrance
 import com.smartisan.music.ui.library.rememberLibraryListEntrance
+import com.smartisan.music.ui.theme.themedListRowBackground
+import com.smartisan.music.ui.theme.monetContentBackground
 
 @Composable
 internal fun PlaylistRootPage(
@@ -64,9 +67,7 @@ internal fun PlaylistRootPage(
     Box(
         modifier
             .fillMaxSize()
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(R.drawable.account_background)
-            )
+            .libraryTexture()
     ) {
         if (active)
             Column(Modifier.fillMaxSize()) {
@@ -83,6 +84,9 @@ internal fun PlaylistRootPage(
                                 pressed = pressed,
                             )
                         )
+                        // [v11] 「新建播放列表」白条叠加同款莫奈渐变（底色透明，保留 PNG 按下态）；
+                        // 关闭莫奈时这一层不绘制，原样零改动。
+                        .monetContentBackground(androidx.compose.ui.graphics.Color.Transparent)
                         .clickable(
                             source,
                             null,
@@ -205,13 +209,7 @@ private fun PlaylistSummaryRow(
                 .fillMaxWidth()
                 .height(dimensionResource(R.dimen.listview_item_height))
                 .clipToBounds()
-                .smartisanPainterBackground(
-                    rememberSmartisanDrawablePainter(
-                        R.drawable.listview_selector,
-                        pressed = pressed,
-                        activated = editMode && checked,
-                    )
-                )
+                .themedListRowBackground(pressed = pressed, activated = editMode && checked)
                 .semantics { if (editMode) selected = checked }
                 .clickable(
                     source,
@@ -248,7 +246,7 @@ private fun PlaylistSummaryRow(
                                 platformStyle = PlatformTextStyle(includeFontPadding = true),
                             ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                     )
                     BasicText(
                         pluralStringResource(
@@ -268,7 +266,7 @@ private fun PlaylistSummaryRow(
                                 platformStyle = PlatformTextStyle(includeFontPadding = true),
                             ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Clip,
                     )
                 }
             }

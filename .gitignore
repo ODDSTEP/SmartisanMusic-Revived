@@ -2,21 +2,34 @@
 .gradle
 .kotlin/
 /local.properties
+local.properties
 /.idea/
 
 .DS_Store
 Thumbs.db
 
 /build
+build/
 /captures
 .externalNativeBuild
 .cxx
+app/.cxx/
 
 # Packaged artifacts
 /app/release/
 /app/debug/
 /*.apk
 /*.aab
+
+# Signing material — never commit
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Python helper output
+__pycache__/
+*.pyc
 
 # Reverse engineering workspace
 /reverse/*

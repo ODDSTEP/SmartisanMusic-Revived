@@ -1,12 +1,21 @@
 package com.smartisan.music.ui.shell.titlebar
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.smartisan.music.R
 import com.smartisan.music.ui.album.AlbumViewMode
 import com.smartisan.music.ui.artist.ArtistTarget
 import com.smartisan.music.ui.artist.showsAlbumSwitch
 import com.smartisan.music.ui.navigation.MusicDestination
+import com.smartisan.music.ui.songs.SongEyeFrames
 
 @Composable
 internal fun MainTitleBar(
@@ -16,12 +25,23 @@ internal fun MainTitleBar(
     albumEditMode: Boolean,
     selectedAlbumCount: Int,
     albumDetailTitle: String?,
+    /**
+     * [1.4.29·R131] 详情层是否激活，必须由「是否选中了专辑」这种对象状态决定，
+     * 不能用标题字符串是否为空来判断——「未知专辑」的标题为空，会被误判成根态，
+     * 结果顶栏画多选图标、没有返回箭头，内容区却已经是详情页。
+     */
+    albumDetailActive: Boolean = albumDetailTitle != null,
     albumViewMode: AlbumViewMode,
     artistTarget: ArtistTarget?,
     artistAlbumViewMode: AlbumViewMode,
     onEnterSongsEditMode: () -> Unit,
     onExitSongsEditMode: () -> Unit,
     onRequestDeleteSelected: () -> Unit,
+    /** [1.4.28] 专辑多选态的删除：此前是空 lambda，按钮点了完全没反应。 */
+    onRequestDeleteSelectedAlbums: () -> Unit = {},
+    onHideSongsSelected: () -> Unit,
+    /** 歌曲编辑模式下，当前选中歌曲中是否包含已隐藏项（含任意隐藏项 → 闭眼态） */
+    selectedSongsContainHidden: Boolean,
     onEnterAlbumEditMode: () -> Unit,
     onExitAlbumEditMode: () -> Unit,
     onToggleAlbumViewMode: () -> Unit,
@@ -30,6 +50,8 @@ internal fun MainTitleBar(
     onToggleArtistAlbumViewMode: () -> Unit,
     onRootBack: (() -> Unit)?,
     onSearchClick: () -> Unit,
+    songsChromeCollapsed: Boolean = false,
+    onToggleSongsChrome: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
@@ -52,7 +74,7 @@ internal fun MainTitleBar(
     val left = mutableListOf<com.smartisan.music.ui.components.SmartisanTitleBarAction>()
     val right = mutableListOf<com.smartisan.music.ui.components.SmartisanTitleBarAction>()
     when {
-        destination == MusicDestination.Album && albumDetailTitle != null ->
+        destination == MusicDestination.Album && albumDetailActive ->
             left += icon(R.drawable.standard_icon_back_selector, backLabel, onAlbumDetailBack)
         destination == MusicDestination.Artist && artistTarget != null -> {
             left += icon(R.drawable.standard_icon_back_selector, backLabel, onArtistBack)
@@ -60,7 +82,7 @@ internal fun MainTitleBar(
                 right +=
                     icon(
                         R.drawable.album_switch_selector,
-                        resources.getString(R.string.tab_album),
+                        resources.getString(R.string.view_mode),
                         onToggleArtistAlbumViewMode,
                         checked = artistAlbumViewMode == AlbumViewMode.List,
                     )
@@ -79,6 +101,35 @@ internal fun MainTitleBar(
                     onRequestDeleteSelected,
                     selectedSongCount > 0,
                 )
+            // 状态眼睛（与文件夹页同一套图标与动画）：
+            // 无选中或选中项全部未隐藏 → 睁眼(0001)，点击后全部隐藏（动画：睁→闭）；
+            // 选中项含已隐藏（全部隐藏或混合）→ 闭眼(0016)，点击后全部恢复显示（动画：闭→睁）。
+            var pendingEyeHidden by remember { mutableStateOf<Boolean?>(null) }
+            val eyeTime = remember { Animatable(300f) }
+            LaunchedEffect(pendingEyeHidden) {
+                if (pendingEyeHidden != null) {
+                    eyeTime.snapTo(0f)
+                    eyeTime.animateTo(300f, tween(300, easing = LinearEasing))
+                    pendingEyeHidden = null
+                }
+            }
+            val eyeFrame =
+                if (pendingEyeHidden != null && eyeTime.value < 160f) {
+                    val index = (eyeTime.value / 10).toInt().coerceIn(0, 15)
+                    SongEyeFrames[if (pendingEyeHidden == true) index else 15 - index]
+                } else if (selectedSongsContainHidden) R.drawable.eye_icon_0016
+                else R.drawable.eye_icon_0001
+            right +=
+                com.smartisan.music.ui.components.SmartisanTitleBarAction(
+                    eyeFrame,
+                    resources.getString(R.string.show_hide_songs),
+                    {
+                        pendingEyeHidden = !selectedSongsContainHidden
+                        onHideSongsSelected()
+                    },
+                    selectedSongCount > 0 && pendingEyeHidden == null,
+                    tint = com.smartisan.music.ui.components.StatefulIconTint,
+                )
         }
         destination == MusicDestination.Album && albumEditMode -> {
             left +=
@@ -91,7 +142,7 @@ internal fun MainTitleBar(
                 icon(
                     R.drawable.titlebar_btn_delete_selector,
                     resources.getString(R.string.delete),
-                    {},
+                    onRequestDeleteSelectedAlbums,
                     selectedAlbumCount > 0,
                 )
         }
@@ -115,11 +166,14 @@ internal fun MainTitleBar(
                             else onEnterSongsEditMode,
                         )
             }
+            // 从「更多」进入的歌曲 / 专辑页：多选模式紧跟在返回键右侧，
+            // 而不是放在右上角。这样左右两组各两个控件，中间才留得下"专辑"标题，
+            // 与把「专辑」钉在底部导航栏时的顶栏完全一致。
             if (
                 onRootBack != null &&
                     (destination == MusicDestination.Songs || destination == MusicDestination.Album)
             ) {
-                right +=
+                left +=
                     icon(
                         R.drawable.standard_icon_multi_select_selector,
                         resources.getString(R.string.edit),
@@ -127,17 +181,53 @@ internal fun MainTitleBar(
                         else onEnterSongsEditMode,
                     )
             }
+            // 搜索图标任何情况下在最右上（1.2.16 统一规范）：注意右侧动作倒序渲染，
+            // search 必须是 right 列表第一项；切换视图放其后（视觉上在搜索左侧）
             right +=
                 icon(
                     R.drawable.search_btn_selector,
                     resources.getString(R.string.tab_local_search),
                     onSearchClick,
                 )
+            // 1.3.7：歌曲页顶栏搜索图标左边的收起按钮，只负责「排序栏」的收起/展开。
+            // right 列表倒序渲染，放在 search 之后即视觉上位于搜索左边。
+            // 去掉 1.3.6 的双击 + 深/浅色：不额外着色，颜色/透明度跟搜索、编辑图标
+            // 完全一致（都用 selector 自带状态色）；只保留 1.3.6 的 1.7 倍等比放大。
+            if (destination == MusicDestination.Songs && !songsEditMode) {
+                right +=
+                    com.smartisan.music.ui.components.SmartisanTitleBarAction(
+                        iconRes =
+                            if (songsChromeCollapsed)
+                                R.drawable.btn_songs_chrome_expand_selector
+                            else R.drawable.btn_songs_chrome_collapse_selector,
+                        contentDescription =
+                            resources.getString(
+                                if (songsChromeCollapsed) R.string.songs_chrome_expand
+                                else R.string.songs_chrome_collapse
+                            ),
+                        onClick = onToggleSongsChrome,
+                        iconScale = 1.7f,
+                        // [1.4.24·R21] PNG → 矢量圆角灰三角。
+                        // 形状/视觉尺寸与 v19 原素材一致（宽 9.33dp × 1.7），
+                        // 但不再有位图放大后的软边；按下时透明度 0.43→0.62 给反馈。
+                        customIcon = { m, pressed ->
+                            com.smartisan.music.ui.components.SmartisanCaret(
+                                pointingDown = songsChromeCollapsed,
+                                contentWidth =
+                                    com.smartisan.music.ui.components.SongsChromeCaretWidth,
+                                modifier = m,
+                                color =
+                                    androidx.compose.material3.MaterialTheme.colorScheme
+                                        .onSurface.copy(alpha = if (pressed) 0.62f else 0.43f),
+                            )
+                        },
+                    )
+            }
             if (destination == MusicDestination.Album)
                 right +=
                     icon(
                         R.drawable.album_switch_selector,
-                        resources.getString(R.string.tab_album),
+                        resources.getString(R.string.view_mode),
                         onToggleAlbumViewMode,
                         checked = albumViewMode == AlbumViewMode.List,
                     )
@@ -169,12 +259,16 @@ internal fun SearchDetailTitleBar(
         albumEditMode = false,
         selectedAlbumCount = 0,
         albumDetailTitle = albumDetailTitle,
+        // [1.4.29·R131] 搜索详情本身就是详情层，标题为空（未知专辑）也必须有返回箭头。
+        albumDetailActive = true,
         albumViewMode = AlbumViewMode.List,
         artistTarget = artistTarget,
         artistAlbumViewMode = artistAlbumViewMode,
         onEnterSongsEditMode = {},
         onExitSongsEditMode = {},
         onRequestDeleteSelected = {},
+        onHideSongsSelected = {},
+        selectedSongsContainHidden = false,
         onEnterAlbumEditMode = {},
         onExitAlbumEditMode = {},
         onToggleAlbumViewMode = {},

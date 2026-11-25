@@ -1,17 +1,14 @@
 package com.smartisan.music.ui.settings
 
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import com.smartisan.music.R
 import com.smartisan.music.data.settings.*
-import com.smartisan.music.launcher.AppIconManager
+import com.smartisan.music.ui.library.libraryTexture
 import com.smartisan.music.ui.shell.PageStackTransition
 
 @Composable
@@ -35,9 +32,6 @@ internal fun SettingsPage(
     onThemeModeChange: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val appIconManager = remember(context) { AppIconManager(context) }
-    var appIcon by remember(appIconManager) { mutableStateOf(appIconManager.currentIcon()) }
     var editingArtistSeparators by remember { mutableStateOf(false) }
     var artistSeparatorsInitialValues by remember { mutableStateOf(emptySet<String>()) }
     val latestOnArtistSeparatorsChange by rememberUpdatedState(onArtistSeparatorsChange)
@@ -51,7 +45,7 @@ internal fun SettingsPage(
 
     PageStackTransition(
         secondaryKey = secondaryPage,
-        modifier = modifier.fillMaxSize().background(colorResource(R.color.page_background)),
+        modifier = modifier.fillMaxSize().libraryTexture(pageDeep = true),
         label = "settings page stack",
         primaryContent = {
             SettingsRootPage(
@@ -60,7 +54,6 @@ internal fun SettingsPage(
                 artistSettings = artistSettings,
                 navigationSettings = navigationSettings,
                 themeMode = themeMode,
-                appIcon = appIcon,
                 onClose = onClose,
                 onScratchEnabledChange = onScratchEnabledChange,
                 onHidePlayerAxisEnabledChange = onHidePlayerAxisEnabledChange,
@@ -72,14 +65,20 @@ internal fun SettingsPage(
                     artistSeparatorsInitialValues = artistSettings.separators
                     editingArtistSeparators = true
                 },
-                onNavigationClick = {
-                    onSecondaryPageChange(SettingsSecondaryPage.Navigation)
-                },
-                onAppIconClick = {
-                    onSecondaryPageChange(SettingsSecondaryPage.AppIcon)
+    onNavigationClick = {
+        onSecondaryPageChange(SettingsSecondaryPage.Navigation)
+    },
+    onMemoryClick = {
+        onSecondaryPageChange(SettingsSecondaryPage.Memory)
+    },
+                onEngineClick = {
+                    onSecondaryPageChange(SettingsSecondaryPage.Engine)
                 },
                 onThemeClick = {
                     onSecondaryPageChange(SettingsSecondaryPage.Theme)
+                },
+                onColorThemeClick = {
+                    onSecondaryPageChange(SettingsSecondaryPage.ColorTheme)
                 },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -118,33 +117,26 @@ internal fun SettingsPage(
                         onThemeModeChange = onThemeModeChange,
                         modifier = Modifier.fillMaxSize(),
                     )
-                SettingsSecondaryPage.AppIcon ->
-                    AppIconSettingsPage(
+                SettingsSecondaryPage.Memory ->
+                    MemoryPage(
                         active = active,
-                        selectedIcon = appIcon,
                         onClose = {
                             onSecondaryPageChange(null)
                         },
-                        onIconSelected = { selectedIcon ->
-                            appIconManager
-                                .setIcon(selectedIcon)
-                                .onSuccess { appliedIcon ->
-                                    appIcon = appliedIcon
-                                }
-                                .onFailure { error ->
-                                    Log.e(
-                                        "AppIconSettings",
-                                        "Failed to change launcher icon",
-                                        error,
-                                    )
-                                    Toast.makeText(
-                                            context,
-                                            R.string.app_icon_change_failed,
-                                            Toast.LENGTH_SHORT,
-                                        )
-                                        .show()
-                                }
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                SettingsSecondaryPage.ColorTheme ->
+                    ColorThemeSettingsPage(
+                        active = active,
+                        onClose = {
+                            onSecondaryPageChange(null)
                         },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                SettingsSecondaryPage.Engine ->
+                    EngineSettingsPage(
+                        active = active,
+                        onClose = { onSecondaryPageChange(null) },
                         modifier = Modifier.fillMaxSize(),
                     )
             }
@@ -167,5 +159,7 @@ internal enum class SettingsSecondaryPage {
     AudioFx,
     Navigation,
     Theme,
-    AppIcon,
+    ColorTheme,
+    Memory,
+    Engine,
 }

@@ -15,6 +15,32 @@
   中文 · <a href="README_EN.md">English</a>
 </p>
 
+> **本仓库是 [Mangi-11/SmartisanMusic-Revived](https://github.com/Mangi-11/SmartisanMusic-Revived) 的 fork**，在上游基础上继续开发。上游 README 原文已完整保留在下方，本仓库的改动与下载方式见前面两节；第一次了解这个项目，建议先读上游原文。
+
+## 下载
+
+| 版本 | 说明 | 下载 |
+| --- | --- | --- |
+| 1.4.29 | 全页面背景莫奈化、切引擎崩溃修复、未知专辑返回、USB native EQ 收口 | [ChuiziMusic-1.4.29.apk](https://github.com/ODDSTEP/SmartisanMusic-Revived/releases/latest) |
+
+- 最低要求 Android 8.1（API 27），支持 arm64-v8a。
+- APK 由个人证书签名，与上游或其他分支的签名不同：如果装过别的版本，需要先卸载再安装。
+- 应用不申请 `INTERNET` 权限，不联网、不上传任何内容。
+
+## 本 fork 相对上游的改动
+
+在上游「Compose 重写 + Media3 播放链路」的基础上，这个分支主要做了三件事：
+
+1. **USB DAC 独占输出**：新增 `app/src/main/cpp` 下的 native 层（`usbdac.cpp` + UAC2 会话 + libusb 等时传输 + libsamplerate 重采样），把 PCM 直接送给 USB 声卡，绕开系统混音；设置里可开关，开启时会提示软音量失效等风险。
+2. **解码与 DSP 扩展**：引入 BASS 作为可替换解码器与 DSP（EQ / 压限 / 混响 / 交叉淡化），并用内置 ffmpeg（`libffmpegbin.so`）覆盖 DSD、APE 等高码率与冷门格式；BASS 被限制为「只解码、不接声卡」，构建期由 `verifyBassIsolation` 强制检查，仓库内相关授权说明见 `THIRD_PARTY_NOTICES.md`。
+3. **界面整改**：莫奈取色与 Material 3 主题、深浅色分类色板、自定义应用图标、自绘媒体通知模板，以及睡眠定时、播放队列拖拽等交互打磨。
+
+包名调整为 `cn.chuizi.music`，应用名「锤子音乐」，版本号跟随本 fork 独立递增（当前 1.4.29 / versionCode 93）。
+
+## 与上游的关系
+
+上游仓库**没有声明开源许可证**，因此本仓库不另行附加许可证；这里的修改由本仓库作者完成，但整体仍基于上游代码，转发、二次分发前请先同时获得上游作者与本仓库作者的许可。上游还原的 Smartisan 视觉素材，以及 realme 图标、BASS、FFmpeg、libusb、libsamplerate 等第三方组件的权利归属，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 锤子科技从来不只把自己看作一家做视觉的公司。好看的界面只是起点，产品最终仍要解决真实问题；设计、功能和交互应当保持一致，让第一次使用的人不费力，也让长期使用的人偶尔发现藏在细节里的惊喜。Smartisan 这个名字所代表的“智能时代的工匠”，不是为产品贴上一层漂亮的皮肤，而是认真对待每一次触摸、反馈与停顿。
 
 锤子音乐是这种理念很完整的一次表达。黑胶唱盘、唱针、搓碟和爆豆音让数字音乐重新变成可以触碰的东西，歌曲、专辑和资料库又始终保持清楚、克制。它有拟物的趣味，却不该为了表演牺牲播放和管理；真正值得保留的，正是质感、秩序与实用性之间的平衡。

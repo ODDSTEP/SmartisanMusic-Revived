@@ -31,6 +31,7 @@ import com.smartisan.music.ui.components.smartisanTextSize
 import com.smartisan.music.ui.songs.SmartisanPlayingTitle
 import com.smartisan.music.ui.songs.SongPlaybackState
 import java.util.Locale
+import com.smartisan.music.ui.theme.themedListRowBackground
 
 /** The album row has a track index and duration; its geometry differs from the songs tab. */
 @Composable
@@ -53,9 +54,7 @@ internal fun SmartisanAlbumTrackRow(
             .fillMaxWidth()
             .height(rowHeight)
             .clipToBounds()
-            .smartisanPainterBackground(
-                rememberSmartisanDrawablePainter(R.drawable.listview_selector, pressed = pressed)
-            )
+            .themedListRowBackground(pressed = pressed)
             .clickable(interaction, null, role = Role.Button, onClick = smartisanClick(onClick)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -101,7 +100,7 @@ internal fun SmartisanAlbumTrackRow(
                             platformStyle = PlatformTextStyle(includeFontPadding = true),
                         ),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                 )
         }
         BasicText(

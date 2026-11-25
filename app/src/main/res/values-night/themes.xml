@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!--
+      1.4.4 N-02：深色模式下的系统 SplashScreen 主题。
+      values/themes.xml 里 Theme.Music.Starting 的 windowSplashScreenBackground 恒白；
+      深浅模式切换会重建 Activity，那一瞬系统级遮罩若仍是白底，会「先闪一下白」
+      再进 App 内深色 StartupSplash，割裂。这里在 -night 下覆盖为深色页底
+      #25282D（对齐 values-night/colors.xml 的 page_background，与深色开屏底色一致）。
+
+      注意：同名 style 在 -night 限定符下是「整份替换」而非逐 item 合并，
+      因此这里必须把 values/themes.xml 的 3 个 item 全部重新声明，
+      只把 windowSplashScreenBackground 换成夜色，其余两个 item 保持同值，
+      否则深色下会丢掉透明占位图标与 postSplashScreenTheme。
+      浅色版 values/themes.xml 一个字节不动；默认彩色主题不受影响。
+    -->
+    <style name="Theme.Music.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/page_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_no_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.Music</item>
+    </style>
+</resources>
