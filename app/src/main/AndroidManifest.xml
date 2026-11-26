@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- USB 独占直出绕开了系统 AudioTrack，原本由它持有的 PARTIAL_WAKE_LOCK 不会生效，
+         必须由独占通道自己持有，否则后台/灭屏时 CPU 与 USB 总线休眠 → 等时传输饿死 → 爆音。
+         详见 UsbExclusiveAudioSink 的 acquireWakeLock/releaseWakeLock。 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- 所有文件访问：DSD(DFF/DSF)/DTS/WavPack/TAK 等格式不被系统媒体扫描器归类为「音频」，
+         READ_MEDIA_AUDIO 授权读不到它们的 MediaStore Files uri，转码播放会静默失败。
+         声明后需引导用户在系统设置里开启（不开启时其余功能不受影响）。 -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- USB 主机模式：USB 独占（UAC 直出）需要直接接管 USB 声卡。
+         声明为可选，避免没有 USB host 的设备被商店过滤掉。 -->
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="false" />
+
+    <application
+        android:name=".MusicApplication"
+        android:allowBackup="true"
+        android:enableOnBackInvokedCallback="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="${appLabel}"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Music">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Music.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- [补实现·参考包0.3.0] LAUNCHER 入口移到下方两个 activity-alias，
+                 由 AppIconManager 切换启用哪一个，实现"换桌面图标"。
+                 原 MainActivity 直挂 LAUNCHER filter 已移除，避免桌面出现 3 个图标。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/ogg" />
+                <data android:mimeType="application/x-ogg" />
+                <data android:mimeType="application/itunes" />
+            </intent-filter>
+            <!-- 1.4.2：桌面长按菜单 shortcut 的 action 兜底。shortcut intent 已带
+                 targetPackage/targetClass（显式 Component）；这里补一个不带 LAUNCHER 的
+                 DEFAULT filter，兼容个别 OEM 会忽略 component 改走隐式解析的情况，
+                 避免「该桌面快捷方式已失效」。不会产生第二个桌面入口。 -->
+            <intent-filter>
+                <action android:name="com.smartisan.music.action.SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- 桌面长按 App 图标快捷入口：@xml/shortcuts 由各 flavor 源集提供，
+                 内含该 flavor 自身的 applicationId（targetPackage）。 -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!-- [补实现·参考包0.3.0] 桌面图标切换：两款图标各一个 alias，
+             由 AppIconManager.setIcon() 切换启用状态（始终只有一个 enabled）。 -->
+        <activity-alias
+            android:name=".launcher.OriginalIconAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="${appLabel}"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".launcher.ModernIconAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_modern"
+            android:label="${appLabel}"
+            android:roundIcon="@mipmap/ic_launcher_modern"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.logfileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/log_file_paths" />
+        </provider>
+
+        <service
+            android:name=".playback.PlaybackService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.diagnostics_fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/diagnostics_file_paths" />
+        </provider>
+    </application>
+
+</manifest>

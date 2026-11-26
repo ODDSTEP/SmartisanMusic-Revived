@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [护栏 G-14·台账登记] 三 flavor 各写死 targetPackage 构成显式 Component +
+     manifest 补 SHORTCUT action filter；防「该桌面快捷方式已失效，点击打不开」。
+     删此护栏会复发病，改动前查《护栏台账（防拆登记）.md》。 -->
+<!-- 1.4.2 正式版 B：桌面长按 App 图标快捷入口（直达歌曲/专辑/喜欢/搜索）。
+     修复 1.4.1「点击后提示快捷方式已失效」：intent 显式指定
+     targetPackage(=本 flavor 的 applicationId) + targetClass(=MainActivity 类全名)，
+     构成可靠的显式 Component；短路 action/extra 仍由 MainActivity 解析 destination。
+     图标改专用「常态实心黑 / 按下红」selector，不再复用浅灰底栏 selector。 -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="shortcut_songs"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_ic_songs"
+        android:shortcutShortLabel="@string/tab_song"
+        android:shortcutLongLabel="@string/tab_song">
+        <intent
+            android:action="com.smartisan.music.action.SHORTCUT"
+            android:targetPackage="cn.chuizi.music"
+            android:targetClass="com.smartisan.music.MainActivity">
+            <extra
+                android:name="com.smartisan.music.extra.SHORTCUT_DESTINATION"
+                android:value="songs" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_album"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_ic_album"
+        android:shortcutShortLabel="@string/tab_album"
+        android:shortcutLongLabel="@string/tab_album">
+        <intent
+            android:action="com.smartisan.music.action.SHORTCUT"
+            android:targetPackage="cn.chuizi.music"
+            android:targetClass="com.smartisan.music.MainActivity">
+            <extra
+                android:name="com.smartisan.music.extra.SHORTCUT_DESTINATION"
+                android:value="album" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_loved_songs"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_ic_loved"
+        android:shortcutShortLabel="@string/collect_music"
+        android:shortcutLongLabel="@string/collect_music">
+        <intent
+            android:action="com.smartisan.music.action.SHORTCUT"
+            android:targetPackage="cn.chuizi.music"
+            android:targetClass="com.smartisan.music.MainActivity">
+            <extra
+                android:name="com.smartisan.music.extra.SHORTCUT_DESTINATION"
+                android:value="loved_songs" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_search"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_ic_search"
+        android:shortcutShortLabel="@string/tab_local_search"
+        android:shortcutLongLabel="@string/tab_local_search">
+        <intent
+            android:action="com.smartisan.music.action.SHORTCUT"
+            android:targetPackage="cn.chuizi.music"
+            android:targetClass="com.smartisan.music.MainActivity">
+            <extra
+                android:name="com.smartisan.music.extra.SHORTCUT_DESTINATION"
+                android:value="search" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.4.2 桌面长按菜单 shortcut 图标：常态实心黑，按下/聚焦等态实心红。
+     是否随按下变色取决于桌面 launcher 是否对 shortcut 图标施加 state，实机待验。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"   android:drawable="@drawable/shortcut_ic_songs_red" />
+    <item android:state_focused="true"   android:drawable="@drawable/shortcut_ic_songs_red" />
+    <item android:state_selected="true"  android:drawable="@drawable/shortcut_ic_songs_red" />
+    <item android:state_activated="true" android:drawable="@drawable/shortcut_ic_songs_red" />
+    <item                                 android:drawable="@drawable/shortcut_ic_songs_black" />
+</selector>

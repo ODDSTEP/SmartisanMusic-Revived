@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFFFF</color>
+
+    <!--
+      语义色：供布局与代码统一引用，values-night/colors.xml 提供深色覆盖。
+      日间值与原硬编码值逐一对应，不改变既有浅色视觉。
+    -->
+    <color name="page_background">#ffffff</color>
+    <color name="surface_card">#ffffff</color>
+    <color name="surface_raised">#f7f8f9</color>
+    <color name="surface_raised_soft">#fafbfd</color>
+    <color name="text_primary">#cc000000</color>
+    <color name="text_tertiary">#66000000</color>
+    <color name="text_emphasis">#000000</color>
+    <color name="text_placeholder">#dbdbdb</color>
+    <color name="text_disabled_gray">#c8c8c8</color>
+    <color name="footer_text_color">#bcbcbc</color>
+    <color name="divider_soft">#e9e9e9</color>
+    <color name="input_border">#e2e2e2</color>
+    <color name="playing_red">#e64040</color>
+    <color name="highlight_red">#c14352</color>
+    <color name="panel_action_text">#4a69b3</color>
+    <color name="panel_item_text">#4f5050</color>
+    <color name="playing_title_text">#6b6b6f</color>
+    <color name="playing_subtitle_text">#88333333</color>
+    <color name="playing_time_text">#737272</color>
+    <color name="title_bar_background">#ffffff</color>
+    <color name="quickbar_grid_background">#eaeaea</color>
+<color name="ic_launcher_background_color">#FFFFFF</color>
+    <color name="bottom_bar_surface">#f7f7f7</color>
+    <color name="bottom_bar_gradient_top">#ffffff</color>
+    <!-- [1.4.24·R34 自绘通知] 通知栏文字色：浅色通知底用深字 -->
+    <color name="notif_text_primary">#101010</color>
+    <color name="notif_text_secondary">#8a000000</color>
+    <!-- [1.4.25·R69] 播放模式键"已开启"态高亮色：循环/单曲/随机任一开着就染成品牌红，
+         关闭态保持主文字色（原厂 cycle_off 自带 40% 透明，天然像"未启用"）。
+         只靠深浅区分时用户实测"颜色都一样"，加一档颜色差才一眼可辨。 -->
+    <color name="notif_mode_active">#e64040</color>
+</resources>

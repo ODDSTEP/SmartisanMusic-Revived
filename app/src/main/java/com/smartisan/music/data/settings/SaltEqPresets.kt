@@ -1,0 +1,292 @@
+package com.smartisan.music.data.settings
+
+/**
+ * [1.4.16·E2] Salt Player(椒盐音乐) 10 段参量 EQ 预设，源码级精确照抄（GPL 开源）。
+ * 从 base.apk 反编译 com.salt.music.player.equalizer 的 30 个 builtin 预设提取：
+ * 每个预设由 3~6 个 biquad band 组成，各有独立频点/增益/Q/滤波类型，比固定 10 段更精细。
+ * 单位：frequency=Hz，gain=dB，q=品质因数。
+ */
+internal enum class EqFilterType { Peaking, LowShelf, HighShelf, LowPass, HighPass }
+
+internal data class EqBand(
+    val id: String,
+    val type: EqFilterType,
+    val frequencyHz: Float,
+    val gainDb: Float,
+    val q: Float,
+)
+
+internal object SaltEqPresets {
+    /** 预设显示名（英文，与 Salt Player 一致） */
+    val displayNames = mapOf(
+        "studio_reference" to "Studio Reference",
+        "mix_translation" to "Mix Translation",
+        "low_mid_cleanup" to "Low-Mid Cleanup",
+        "smooth_treble" to "Smooth Treble",
+        "air_and_detail" to "Air & Detail",
+        "vinyl" to "Vinyl",
+        "bass_boost" to "Bass Definition",
+        "clear_vocals" to "Clear Vocals",
+        "female_vocals" to "Female Vocals",
+        "male_vocals" to "Male Vocals",
+        "acoustic" to "Acoustic",
+        "live_folk" to "Live Folk",
+        "ancient_style_stereo" to "Ancient Style Stereo",
+        "concert" to "Concert",
+        "music_hall" to "Music Hall",
+        "classical" to "Classical",
+        "jazz" to "Jazz",
+        "cinematic" to "Cinematic",
+        "acg" to "ACG",
+        "hip_hop" to "Hip Hop",
+        "electronic" to "Electronic",
+        "dance" to "Dance",
+        "rock" to "Rock",
+        "metal" to "Metal",
+        "ultra_sub_bass" to "Sub-Bass Extension",
+        "warm" to "Warm",
+        "bright" to "Bright",
+        "lo_fi" to "Lo-Fi",
+        "late_night" to "Late Night",
+        "original" to "Original",
+    )
+
+    /** 预设中文名（锤子风格本地化） */
+    val chineseNames = mapOf(
+        "studio_reference" to "录音室参考",
+        "mix_translation" to "混音翻译",
+        "low_mid_cleanup" to "中低频清理",
+        "smooth_treble" to "顺滑高频",
+        "air_and_detail" to "空气感与细节",
+        "vinyl" to "黑胶",
+        "bass_boost" to "低音强化",
+        "clear_vocals" to "清澈人声",
+        "female_vocals" to "女声",
+        "male_vocals" to "男声",
+        "acoustic" to "原声吉他",
+        "live_folk" to "现场民谣",
+        "ancient_style_stereo" to "古风立体声",
+        "concert" to "演唱会",
+        "music_hall" to "音乐厅",
+        "classical" to "古典",
+        "jazz" to "爵士",
+        "cinematic" to "电影",
+        "acg" to "动漫",
+        "hip_hop" to "嘻哈",
+        "electronic" to "电子",
+        "dance" to "舞曲",
+        "rock" to "摇滚",
+        "metal" to "金属",
+        "ultra_sub_bass" to "超低频延伸",
+        "warm" to "温暖",
+        "bright" to "明亮",
+        "lo_fi" to "Lo-Fi",
+        "late_night" to "深夜",
+        "original" to "原声",
+    )
+
+    /** 全部 band 数据：preset key -> band 列表 */
+    val bands = mapOf(
+        "studio_reference" to listOf(
+            EqBand("reference.foundation", EqFilterType.LowShelf, 90.0f, 1.5f, 0.7f),
+            EqBand("reference.mud", EqFilterType.Peaking, 320.0f, -1.2f, 1.1f),
+            EqBand("reference.presence", EqFilterType.Peaking, 3200.0f, 1.5f, 1.0f),
+            EqBand("reference.air", EqFilterType.HighShelf, 10000.0f, 1.8f, 0.7f),
+        ),
+        "mix_translation" to listOf(
+            EqBand("translation.sub", EqFilterType.LowShelf, 75.0f, -0.8f, 0.7f),
+            EqBand("translation.mud", EqFilterType.Peaking, 250.0f, -1.2f, 1.1f),
+            EqBand("translation.box", EqFilterType.Peaking, 850.0f, -0.7f, 1.2f),
+            EqBand("translation.presence", EqFilterType.Peaking, 3000.0f, 1.2f, 1.0f),
+            EqBand("translation.air", EqFilterType.HighShelf, 11000.0f, 1.5f, 0.7f),
+        ),
+        "low_mid_cleanup" to listOf(
+            EqBand("cleanup.warmth", EqFilterType.Peaking, 180.0f, -1.2f, 1.0f),
+            EqBand("cleanup.mud", EqFilterType.Peaking, 320.0f, -3.0f, 1.1f),
+            EqBand("cleanup.box", EqFilterType.Peaking, 650.0f, -1.5f, 1.2f),
+            EqBand("cleanup.focus", EqFilterType.Peaking, 2500.0f, 1.0f, 1.0f),
+        ),
+        "smooth_treble" to listOf(
+            EqBand("smooth.balance", EqFilterType.LowShelf, 120.0f, 1.0f, 0.7f),
+            EqBand("smooth.presence", EqFilterType.Peaking, 3200.0f, -1.0f, 1.1f),
+            EqBand("smooth.sibilance", EqFilterType.Peaking, 5800.0f, -2.5f, 1.4f),
+            EqBand("smooth.top", EqFilterType.HighShelf, 10000.0f, -1.5f, 0.7f),
+        ),
+        "air_and_detail" to listOf(
+            EqBand("detail.clean", EqFilterType.Peaking, 420.0f, -1.0f, 1.0f),
+            EqBand("detail.presence", EqFilterType.Peaking, 2800.0f, 1.2f, 1.0f),
+            EqBand("detail.texture", EqFilterType.Peaking, 5800.0f, 1.5f, 1.1f),
+            EqBand("detail.air", EqFilterType.HighShelf, 10500.0f, 3.0f, 0.7f),
+        ),
+        "vinyl" to listOf(
+            EqBand("vinyl.weight", EqFilterType.LowShelf, 120.0f, 3.0f, 0.7f),
+            EqBand("vinyl.body", EqFilterType.Peaking, 420.0f, 1.8f, 0.9f),
+            EqBand("vinyl.edge", EqFilterType.Peaking, 3200.0f, -2.5f, 1.0f),
+            EqBand("vinyl.rolloff", EqFilterType.HighShelf, 8500.0f, -5.0f, 0.7f),
+        ),
+        "bass_boost" to listOf(
+            EqBand("bass.foundation", EqFilterType.LowShelf, 78.0f, 3.2f, 0.7f),
+            EqBand("bass.punch", EqFilterType.Peaking, 145.0f, 2.0f, 0.9f),
+            EqBand("bass.mud", EqFilterType.Peaking, 310.0f, -1.8f, 1.1f),
+            EqBand("bass.box", EqFilterType.Peaking, 720.0f, -1.2f, 1.2f),
+            EqBand("bass.definition", EqFilterType.Peaking, 2400.0f, 0.8f, 1.0f),
+        ),
+        "clear_vocals" to listOf(
+            EqBand("vocal.rumble", EqFilterType.LowShelf, 110.0f, -2.0f, 0.7f),
+            EqBand("vocal.mud", EqFilterType.Peaking, 260.0f, -3.0f, 1.0f),
+            EqBand("vocal.box", EqFilterType.Peaking, 650.0f, -1.5f, 1.2f),
+            EqBand("vocal.presence", EqFilterType.Peaking, 2800.0f, 5.0f, 1.0f),
+            EqBand("vocal.air", EqFilterType.HighShelf, 9000.0f, 3.5f, 0.7f),
+        ),
+        "female_vocals" to listOf(
+            EqBand("female.rumble", EqFilterType.LowShelf, 100.0f, -2.5f, 0.7f),
+            EqBand("female.warmth", EqFilterType.Peaking, 280.0f, -2.0f, 1.0f),
+            EqBand("female.focus", EqFilterType.Peaking, 3200.0f, 4.8f, 1.0f),
+            EqBand("female.detail", EqFilterType.Peaking, 7000.0f, 2.5f, 1.1f),
+            EqBand("female.air", EqFilterType.HighShelf, 11000.0f, 2.5f, 0.7f),
+        ),
+        "male_vocals" to listOf(
+            EqBand("male.foundation", EqFilterType.LowShelf, 110.0f, 2.5f, 0.7f),
+            EqBand("male.chest", EqFilterType.Peaking, 280.0f, 3.0f, 0.9f),
+            EqBand("male.nasal", EqFilterType.Peaking, 900.0f, -2.0f, 1.2f),
+            EqBand("male.focus", EqFilterType.Peaking, 2200.0f, 4.5f, 1.0f),
+            EqBand("male.air", EqFilterType.HighShelf, 9000.0f, 1.5f, 0.7f),
+        ),
+        "acoustic" to listOf(
+            EqBand("acoustic.body", EqFilterType.LowShelf, 110.0f, 2.5f, 0.7f),
+            EqBand("acoustic.mud", EqFilterType.Peaking, 300.0f, -2.5f, 1.0f),
+            EqBand("acoustic.wood", EqFilterType.Peaking, 1600.0f, 2.0f, 1.0f),
+            EqBand("acoustic.attack", EqFilterType.Peaking, 4500.0f, 3.8f, 1.0f),
+            EqBand("acoustic.air", EqFilterType.HighShelf, 10000.0f, 2.5f, 0.7f),
+        ),
+        "live_folk" to listOf(
+            EqBand("folk.floor", EqFilterType.LowShelf, 90.0f, 3.5f, 0.7f),
+            EqBand("folk.wood", EqFilterType.Peaking, 260.0f, 2.5f, 0.9f),
+            EqBand("folk.hollow", EqFilterType.Peaking, 720.0f, -2.5f, 1.1f),
+            EqBand("folk.voice", EqFilterType.Peaking, 2500.0f, 3.8f, 1.0f),
+            EqBand("folk.strings", EqFilterType.Peaking, 7000.0f, 3.0f, 1.0f),
+            EqBand("folk.air", EqFilterType.HighShelf, 11000.0f, 2.0f, 0.7f),
+        ),
+        "ancient_style_stereo" to listOf(
+            EqBand("ancient.depth", EqFilterType.LowShelf, 90.0f, 2.5f, 0.7f),
+            EqBand("ancient.warmth", EqFilterType.Peaking, 190.0f, 3.5f, 0.9f),
+            EqBand("ancient.space", EqFilterType.Peaking, 520.0f, -3.5f, 1.0f),
+            EqBand("ancient.pluck", EqFilterType.Peaking, 1800.0f, 3.0f, 1.0f),
+            EqBand("ancient.detail", EqFilterType.Peaking, 5200.0f, 4.5f, 1.0f),
+            EqBand("ancient.air", EqFilterType.HighShelf, 10000.0f, 3.5f, 0.7f),
+        ),
+        "concert" to listOf(
+            EqBand("concert.sub", EqFilterType.LowShelf, 75.0f, 5.0f, 0.7f),
+            EqBand("concert.body", EqFilterType.Peaking, 240.0f, 2.5f, 0.9f),
+            EqBand("concert.clean", EqFilterType.Peaking, 650.0f, -3.5f, 1.0f),
+            EqBand("concert.presence", EqFilterType.Peaking, 2600.0f, 3.5f, 1.0f),
+            EqBand("concert.energy", EqFilterType.Peaking, 7500.0f, 4.5f, 1.0f),
+            EqBand("concert.air", EqFilterType.HighShelf, 12000.0f, 2.5f, 0.7f),
+        ),
+        "music_hall" to listOf(
+            EqBand("hall.floor", EqFilterType.LowShelf, 85.0f, 3.0f, 0.7f),
+            EqBand("hall.body", EqFilterType.Peaking, 300.0f, 3.2f, 0.9f),
+            EqBand("hall.space", EqFilterType.Peaking, 850.0f, -3.0f, 1.0f),
+            EqBand("hall.presence", EqFilterType.Peaking, 2800.0f, 2.5f, 1.0f),
+            EqBand("hall.air", EqFilterType.HighShelf, 9500.0f, 3.5f, 0.7f),
+        ),
+        "classical" to listOf(
+            EqBand("classical.depth", EqFilterType.LowShelf, 90.0f, 2.5f, 0.7f),
+            EqBand("classical.clean", EqFilterType.Peaking, 300.0f, -1.5f, 1.0f),
+            EqBand("classical.strings", EqFilterType.Peaking, 1800.0f, 2.0f, 1.0f),
+            EqBand("classical.detail", EqFilterType.Peaking, 4500.0f, 2.8f, 1.0f),
+            EqBand("classical.air", EqFilterType.HighShelf, 10000.0f, 3.5f, 0.7f),
+        ),
+        "jazz" to listOf(
+            EqBand("jazz.bass", EqFilterType.LowShelf, 100.0f, 3.5f, 0.7f),
+            EqBand("jazz.body", EqFilterType.Peaking, 320.0f, 2.5f, 0.9f),
+            EqBand("jazz.clean", EqFilterType.Peaking, 850.0f, -2.5f, 1.0f),
+            EqBand("jazz.brass", EqFilterType.Peaking, 3000.0f, 2.5f, 1.0f),
+            EqBand("jazz.cymbal", EqFilterType.HighShelf, 8500.0f, 3.5f, 0.7f),
+        ),
+        "cinematic" to listOf(
+            EqBand("cinematic.sub", EqFilterType.LowShelf, 65.0f, 7.0f, 0.7f),
+            EqBand("cinematic.weight", EqFilterType.Peaking, 180.0f, 3.0f, 0.9f),
+            EqBand("cinematic.space", EqFilterType.Peaking, 700.0f, -3.5f, 1.0f),
+            EqBand("cinematic.dialog", EqFilterType.Peaking, 2400.0f, 2.5f, 1.0f),
+            EqBand("cinematic.impact", EqFilterType.Peaking, 6000.0f, 3.5f, 1.0f),
+            EqBand("cinematic.air", EqFilterType.HighShelf, 11000.0f, 4.0f, 0.7f),
+        ),
+        "acg" to listOf(
+            EqBand("acg.bass", EqFilterType.LowShelf, 85.0f, 3.5f, 0.7f),
+            EqBand("acg.clean", EqFilterType.Peaking, 320.0f, -2.5f, 1.0f),
+            EqBand("acg.space", EqFilterType.Peaking, 1100.0f, -1.5f, 1.0f),
+            EqBand("acg.vocal", EqFilterType.Peaking, 3400.0f, 5.5f, 1.0f),
+            EqBand("acg.sparkle", EqFilterType.Peaking, 7500.0f, 3.5f, 1.0f),
+            EqBand("acg.air", EqFilterType.HighShelf, 11000.0f, 2.5f, 0.7f),
+        ),
+        "hip_hop" to listOf(
+            EqBand("hiphop.sub", EqFilterType.LowShelf, 70.0f, 7.5f, 0.7f),
+            EqBand("hiphop.punch", EqFilterType.Peaking, 160.0f, 4.0f, 0.9f),
+            EqBand("hiphop.clean", EqFilterType.Peaking, 500.0f, -3.5f, 1.0f),
+            EqBand("hiphop.voice", EqFilterType.Peaking, 2200.0f, 3.0f, 1.0f),
+            EqBand("hiphop.snap", EqFilterType.HighShelf, 8500.0f, 4.0f, 0.7f),
+        ),
+        "electronic" to listOf(
+            EqBand("electronic.sub", EqFilterType.LowShelf, 70.0f, 6.0f, 0.7f),
+            EqBand("electronic.clean", EqFilterType.Peaking, 280.0f, -2.5f, 1.0f),
+            EqBand("electronic.space", EqFilterType.Peaking, 1000.0f, -2.5f, 1.0f),
+            EqBand("electronic.lead", EqFilterType.Peaking, 4000.0f, 4.5f, 1.0f),
+            EqBand("electronic.air", EqFilterType.HighShelf, 9000.0f, 4.5f, 0.7f),
+        ),
+        "dance" to listOf(
+            EqBand("dance.sub", EqFilterType.LowShelf, 75.0f, 6.0f, 0.7f),
+            EqBand("dance.kick", EqFilterType.Peaking, 170.0f, 3.0f, 0.9f),
+            EqBand("dance.clean", EqFilterType.Peaking, 520.0f, -3.5f, 1.0f),
+            EqBand("dance.lead", EqFilterType.Peaking, 2800.0f, 3.5f, 1.0f),
+            EqBand("dance.sparkle", EqFilterType.HighShelf, 8500.0f, 4.5f, 0.7f),
+        ),
+        "rock" to listOf(
+            EqBand("rock.kick", EqFilterType.LowShelf, 90.0f, 4.0f, 0.7f),
+            EqBand("rock.body", EqFilterType.Peaking, 200.0f, 2.5f, 0.9f),
+            EqBand("rock.mud", EqFilterType.Peaking, 450.0f, -3.5f, 1.0f),
+            EqBand("rock.guitar", EqFilterType.Peaking, 1800.0f, 3.5f, 1.0f),
+            EqBand("rock.attack", EqFilterType.Peaking, 4200.0f, 4.5f, 1.0f),
+            EqBand("rock.air", EqFilterType.HighShelf, 10000.0f, 2.0f, 0.7f),
+        ),
+        "metal" to listOf(
+            EqBand("metal.kick", EqFilterType.LowShelf, 85.0f, 5.0f, 0.7f),
+            EqBand("metal.mud", EqFilterType.Peaking, 280.0f, -3.5f, 1.0f),
+            EqBand("metal.box", EqFilterType.Peaking, 800.0f, -2.5f, 1.0f),
+            EqBand("metal.guitar", EqFilterType.Peaking, 2200.0f, 4.5f, 1.0f),
+            EqBand("metal.attack", EqFilterType.Peaking, 5000.0f, 5.5f, 1.0f),
+            EqBand("metal.air", EqFilterType.HighShelf, 11000.0f, 2.5f, 0.7f),
+        ),
+        "ultra_sub_bass" to listOf(
+            EqBand("subextension.depth", EqFilterType.LowShelf, 45.0f, 4.5f, 0.65f),
+            EqBand("subextension.weight", EqFilterType.Peaking, 72.0f, 2.0f, 0.9f),
+            EqBand("subextension.transition", EqFilterType.Peaking, 155.0f, -1.2f, 1.0f),
+            EqBand("subextension.clean", EqFilterType.Peaking, 320.0f, -1.3f, 1.1f),
+        ),
+        "warm" to listOf(
+            EqBand("warm.low_shelf", EqFilterType.LowShelf, 140.0f, 3.0f, 0.7f),
+            EqBand("warm.edge", EqFilterType.Peaking, 3500.0f, -1.5f, 1.0f),
+            EqBand("warm.high_shelf", EqFilterType.HighShelf, 10000.0f, -2.0f, 0.7f),
+        ),
+        "bright" to listOf(
+            EqBand("bright.presence", EqFilterType.Peaking, 4000.0f, 2.0f, 1.0f),
+            EqBand("bright.high_shelf", EqFilterType.HighShelf, 9500.0f, 3.5f, 0.7f),
+        ),
+        "lo_fi" to listOf(
+            EqBand("lofi.floor", EqFilterType.HighPass, 65.0f, 3.5f, 0.7f),
+            EqBand("lofi.weight", EqFilterType.LowShelf, 160.0f, 3.5f, 0.7f),
+            EqBand("lofi.box", EqFilterType.Peaking, 450.0f, 3.0f, 1.0f),
+            EqBand("lofi.presence", EqFilterType.Peaking, 2500.0f, -3.5f, 1.0f),
+            EqBand("lofi.ceiling", EqFilterType.LowPass, 9000.0f, -3.5f, 0.7f),
+        ),
+        "late_night" to listOf(
+            EqBand("night.bass", EqFilterType.LowShelf, 100.0f, 4.5f, 0.7f),
+            EqBand("night.warmth", EqFilterType.Peaking, 320.0f, 2.5f, 0.9f),
+            EqBand("night.presence", EqFilterType.Peaking, 2800.0f, -2.5f, 1.0f),
+            EqBand("night.soft", EqFilterType.HighShelf, 7500.0f, -5.0f, 0.7f),
+        ),
+        "original" to emptyList(),
+    )
+
+    fun bandsFor(key: String): List<EqBand> = bands[key].orEmpty()
+}

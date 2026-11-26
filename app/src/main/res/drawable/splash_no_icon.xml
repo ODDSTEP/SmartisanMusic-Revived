@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.4.3：系统 SplashScreen 的透明动画图标占位。开屏视觉全部由 App 内
+     StartupSplash（左对齐 + 轻淡入 + 苏芳色名称 + slogan）接管，这里只保留
+     一个透明 drawable，避免冷启动先闪一下系统默认的居中应用图标。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <size android:width="1dp" android:height="1dp" />
+    <solid android:color="@android:color/transparent" />
+</shape>

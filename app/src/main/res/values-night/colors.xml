@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      深色模式覆盖 values/colors.xml 中的语义色。
+      炭灰色板基线：页底 #25282D、标题栏 #292C31、卡片/面板 #34373C、
+      较高表面 #41464D、按压 #484D54、主文字 #F2F2F2、分组标题 #D2D3D5、
+      次要文字 #9FA1A4、弱化 #85878A、禁用 #717377、分隔线 #3A3D42~#404348。
+      品牌强调色（accent_blue/playing_red/highlight_red/panel_action_text/
+      number_picker_text_selected）深浅通用，不覆盖。
+    -->
+    <color name="page_background">#25282d</color>
+    <color name="surface_card">#34373c</color>
+    <color name="surface_raised">#41464d</color>
+    <color name="surface_raised_soft">#41464d</color>
+    <color name="text_primary">#f2f2f2</color>
+    <color name="text_tertiary">#9fa1a4</color>
+    <color name="text_emphasis">#f2f2f2</color>
+    <color name="text_placeholder">#717377</color>
+    <color name="text_disabled_gray">#717377</color>
+    <color name="footer_text_color">#717377</color>
+    <color name="divider_soft">#3a3d42</color>
+    <color name="input_border">#404348</color>
+    <color name="panel_item_text">#d2d3d5</color>
+    <color name="playing_title_text">#d2d3d5</color>
+    <color name="playing_subtitle_text">#9fa1a4</color>
+    <color name="playing_time_text">#9fa1a4</color>
+    <color name="title_bar_background">#292c31</color>
+    <color name="quickbar_grid_background">#34373c</color>
+    <color name="bottom_bar_surface">#282b30</color>
+    <color name="bottom_bar_gradient_top">#2a2d32</color>
+    <!-- [1.4.24·R34 自绘通知] 通知栏文字色：深色通知底用白字 -->
+    <color name="notif_text_primary">#ffffffff</color>
+    <color name="notif_text_secondary">#b3ffffff</color>
+    <!-- [1.4.25·R69] 深色通知底上 #e64040 偏暗，提亮一档保证与白字同屏时可辨。 -->
+    <color name="notif_mode_active">#ff6b6b</color>
+</resources>

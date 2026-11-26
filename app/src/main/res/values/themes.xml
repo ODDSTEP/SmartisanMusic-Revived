@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <style name="Theme.Music" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
+    </style>
+    <style name="Theme.Music.Starting" parent="Theme.SplashScreen">
+        <!-- 1.4.3 开屏定稿恒白底：与 App 内 StartupSplash 的白底衔接，夜间模式也不闪深色 -->
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <!-- 1.4.3：系统 SplashScreen 只保留纯白底、不放居中图标（透明占位）。
+             开屏内容改由 App 内 StartupSplash 自绘：方案① 左对齐 + 轻淡入 +
+             苏芳色名称 + slogan，避免系统强制居中图标把左对齐版式打乱。 -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_no_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.Music</item>
+    </style>
+</resources>
